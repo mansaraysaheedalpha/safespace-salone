@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { hashPin } from "@/lib/auth"
+import { EXPERTISE_CATEGORIES } from "@/lib/constants/expertise"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { display_name, avatar_id, pin } = body
+    const { display_name, avatar_id, expertise, pin } = body
 
     // Validation
     if (!display_name || !avatar_id || !pin) {
@@ -25,6 +26,26 @@ export async function POST(request: NextRequest) {
     if (!/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: "PIN must be exactly 4 digits" },
+        { status: 400 }
+      )
+    }
+
+    // Validate expertise
+    if (!expertise || !Array.isArray(expertise) || expertise.length === 0) {
+      return NextResponse.json(
+        { error: "Please select at least one area of expertise" },
+        { status: 400 }
+      )
+    }
+
+    // Validate each expertise ID
+    const validExpertiseIds = EXPERTISE_CATEGORIES.map((e) => e.id)
+    const invalidExpertise = expertise.filter(
+      (e: string) => !validExpertiseIds.includes(e)
+    )
+    if (invalidExpertise.length > 0) {
+      return NextResponse.json(
+        { error: "Invalid expertise category selected" },
         { status: 400 }
       )
     }
@@ -54,6 +75,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Insert expertise entries
+    const expertiseEntries = expertise.map((expertiseId: string) => ({
+      counselor_id: user.id,
+      expertise: expertiseId,
+    }))
+
+    const { error: expertiseError } = await supabase
+      .from("counselor_expertise")
+      .insert(expertiseEntries)
+
+    if (expertiseError) {
+      console.error("Error saving expertise:", expertiseError)
+      // Don't fail the whole signup, just log the error
+      // The counselor can update their expertise later
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -61,6 +98,7 @@ export async function POST(request: NextRequest) {
         display_name: user.display_name,
         avatar_id: user.avatar_id,
         role: user.role,
+        expertise: expertise,
       },
     })
   } catch (error) {

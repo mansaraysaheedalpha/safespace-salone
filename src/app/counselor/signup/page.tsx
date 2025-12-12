@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserAvatar } from "@/components/user-avatar"
+import { ExpertiseSelector } from "@/components/expertise-selector"
 import { avatars } from "@/data/avatars"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +16,7 @@ export default function CounselorSignupPage() {
   const router = useRouter()
   const [displayName, setDisplayName] = useState("")
   const [selectedAvatar, setSelectedAvatar] = useState("calm-ocean")
+  const [selectedExpertise, setSelectedExpertise] = useState<string[]>([])
   const [pin, setPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
   const [showPin, setShowPin] = useState(false)
@@ -33,6 +35,11 @@ export default function CounselorSignupPage() {
 
     if (displayName.trim().length < 2) {
       setError("Name must be at least 2 characters")
+      return
+    }
+
+    if (selectedExpertise.length === 0) {
+      setError("Please select at least one area of expertise")
       return
     }
 
@@ -55,6 +62,7 @@ export default function CounselorSignupPage() {
         body: JSON.stringify({
           display_name: displayName.trim(),
           avatar_id: selectedAvatar,
+          expertise: selectedExpertise,
           pin,
         }),
       })
@@ -73,6 +81,7 @@ export default function CounselorSignupPage() {
           id: data.user.id,
           displayName: data.user.display_name,
           avatarId: data.user.avatar_id,
+          expertise: data.user.expertise,
         })
       )
 
@@ -107,7 +116,7 @@ export default function CounselorSignupPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="max-w-sm mx-auto w-full space-y-6">
+      <form onSubmit={handleSubmit} className="max-w-md mx-auto w-full space-y-6">
         {/* Avatar selection */}
         <div className="space-y-3">
           <Label>Choose your avatar</Label>
@@ -144,6 +153,24 @@ export default function CounselorSignupPage() {
           />
           <p className="text-xs text-muted-foreground">
             This is how patients will see you
+          </p>
+        </div>
+
+        {/* Expertise selection */}
+        <div className="space-y-3">
+          <Label>
+            Areas of expertise{" "}
+            <span className="text-muted-foreground font-normal">
+              (select all that apply)
+            </span>
+          </Label>
+          <ExpertiseSelector
+            selected={selectedExpertise}
+            onChange={setSelectedExpertise}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">
+            You&apos;ll only see conversations matching your expertise
           </p>
         </div>
 

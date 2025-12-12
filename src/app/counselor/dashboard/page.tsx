@@ -13,10 +13,12 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
+import { ExpertiseBadges } from "@/components/expertise-selector"
 import { ConversationListSkeleton } from "@/components/ui/skeleton"
 import { useNotifications } from "@/hooks/useNotifications"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { cn } from "@/lib/utils"
+import { getExpertiseById } from "@/lib/constants/expertise"
 
 interface Patient {
   id: string
@@ -44,6 +46,7 @@ interface Conversation {
   lastMessage: LastMessage | null
   messageCount: number
   unreadCount: number
+  expertiseCategory?: string
 }
 
 const LAST_READ_STORAGE_KEY = "safespace_last_read"
@@ -75,6 +78,7 @@ interface CounselorInfo {
   id: string
   displayName: string
   avatarId: string
+  expertise?: string[]
 }
 
 type TabType = "waiting" | "active"
@@ -102,6 +106,7 @@ export default function CounselorDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
   const [counselorInfo, setCounselorInfo] = useState<CounselorInfo | null>(null)
+  const [counselorExpertise, setCounselorExpertise] = useState<string[]>([])
   const [error, setError] = useState("")
   const prevWaitingIdsRef = useRef<Set<string>>(new Set())
 
@@ -132,7 +137,11 @@ export default function CounselorDashboard() {
     const storedInfo = localStorage.getItem("safespace_counselor_info")
     if (storedInfo) {
       try {
-        setCounselorInfo(JSON.parse(storedInfo))
+        const info = JSON.parse(storedInfo)
+        setCounselorInfo(info)
+        if (info.expertise) {
+          setCounselorExpertise(info.expertise)
+        }
       } catch {
         router.push("/counselor/login")
       }
@@ -162,6 +171,12 @@ export default function CounselorDashboard() {
       }
 
       setConversations(data.conversations || [])
+
+      // Update expertise from API response if available
+      if (data.counselorExpertise && data.counselorExpertise.length > 0) {
+        setCounselorExpertise(data.counselorExpertise)
+      }
+
       setError("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load conversations")
@@ -256,6 +271,12 @@ export default function CounselorDashboard() {
     return content.slice(0, maxLength) + "..."
   }
 
+  // Get expertise name for display
+  const getExpertiseName = (expertiseId: string) => {
+    const expertise = getExpertiseById(expertiseId)
+    return expertise?.name || expertiseId
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -279,7 +300,7 @@ export default function CounselorDashboard() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Your Conversations</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -311,6 +332,14 @@ export default function CounselorDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Expertise badges */}
+      {counselorExpertise.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs text-muted-foreground mb-2">Your expertise areas:</p>
+          <ExpertiseBadges expertiseIds={counselorExpertise} maxDisplay={6} />
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
@@ -379,7 +408,9 @@ export default function CounselorDashboard() {
           </h3>
           <p className="text-muted-foreground text-sm">
             {activeTab === "waiting"
-              ? "New conversations will appear here when patients reach out"
+              ? counselorExpertise.length > 0
+                ? "New conversations matching your expertise will appear here"
+                : "New conversations will appear here when patients reach out"
               : "Accept waiting conversations to start helping"}
           </p>
         </div>
@@ -440,7 +471,7 @@ export default function CounselorDashboard() {
                     </div>
                   </div>
 
-                  {/* Topic badge */}
+                  {/* Topic and expertise match badge */}
                   <div className="flex items-center gap-2 mb-2">
                     <span
                       className={cn(
@@ -450,6 +481,12 @@ export default function CounselorDashboard() {
                     >
                       {conv.topic}
                     </span>
+                    {/* Show expertise match badge for waiting conversations */}
+                    {activeTab === "waiting" && conv.expertiseCategory && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                        {getExpertiseName(conv.expertiseCategory)}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {conv.messageCount} message{conv.messageCount !== 1 ? "s" : ""}
                     </span>

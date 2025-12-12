@@ -217,6 +217,11 @@ export default function ChatPage() {
   const isLoading = pageLoading || (messagesLoading && messages.length === 0)
   const error = pageError || messagesError
 
+  // Handle when patient requests a new counselor
+  const handleCounselorReset = useCallback(() => {
+    setCounselorInfo(null)
+  }, [])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -250,7 +255,10 @@ export default function ChatPage() {
         counselorName={counselorInfo?.name}
         counselorAvatarId={counselorInfo?.avatarId}
         counselorId={counselorInfo?.id}
+        conversationId={conversationId}
+        patientId={userInfo?.id}
         isConnected={!!counselorInfo}
+        onCounselorReset={handleCounselorReset}
       />
 
       {/* Messages area - with padding for header and input */}
