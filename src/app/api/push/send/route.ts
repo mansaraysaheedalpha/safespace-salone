@@ -1,20 +1,42 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import webpush from "web-push"
 
-// Configure web-push with VAPID keys
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!
+// Lazy import web-push to avoid initialization errors
+let webpush: typeof import("web-push") | null = null
+let vapidConfigured = false
 
-webpush.setVapidDetails(
-  "mailto:support@safespace-salone.com",
-  vapidPublicKey,
-  vapidPrivateKey
-)
+async function getWebPush() {
+  if (!webpush) {
+    webpush = await import("web-push")
+  }
+
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+
+  if (vapidPublicKey && vapidPrivateKey && !vapidConfigured) {
+    webpush.setVapidDetails(
+      "mailto:support@safespace-salone.com",
+      vapidPublicKey,
+      vapidPrivateKey
+    )
+    vapidConfigured = true
+  }
+
+  return { webpush, isConfigured: vapidConfigured }
+}
 
 // POST - Send push notification to a user
 export async function POST(request: NextRequest) {
   try {
+    const { webpush: wp, isConfigured } = await getWebPush()
+
+    if (!isConfigured || !wp) {
+      return NextResponse.json(
+        { error: "Push notifications not configured" },
+        { status: 503 }
+      )
+    }
+
     const body = await request.json()
     const { user_id, title, message, url, tag } = body
 
@@ -61,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Send to all subscriptions
     const results = await Promise.allSettled(
       subscriptions.map((sub) =>
-        webpush.sendNotification(sub.subscription, payload)
+        wp.sendNotification(sub.subscription, payload)
       )
     )
 

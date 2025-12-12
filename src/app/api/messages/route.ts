@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import webpush from "web-push"
 
-// Configure web-push with VAPID keys
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+// Lazy import web-push to avoid initialization errors
+let webpush: typeof import("web-push") | null = null
+let vapidConfigured = false
 
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(
-    "mailto:support@safespace-salone.com",
-    vapidPublicKey,
-    vapidPrivateKey
-  )
+async function getWebPush() {
+  if (!webpush) {
+    webpush = await import("web-push")
+  }
+
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+
+  if (vapidPublicKey && vapidPrivateKey && !vapidConfigured) {
+    webpush.setVapidDetails(
+      "mailto:support@safespace-salone.com",
+      vapidPublicKey,
+      vapidPrivateKey
+    )
+    vapidConfigured = true
+  }
+
+  return { webpush, isConfigured: vapidConfigured }
 }
 
 interface CreateMessageRequest {
@@ -30,12 +41,14 @@ async function sendPushToUser(
   message: string,
   url: string
 ) {
-  if (!vapidPublicKey || !vapidPrivateKey) {
-    console.log("VAPID keys not configured, skipping push")
-    return
-  }
-
   try {
+    const { webpush: wp, isConfigured } = await getWebPush()
+
+    if (!isConfigured || !wp) {
+      console.log("VAPID keys not configured, skipping push")
+      return
+    }
+
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("subscription")
@@ -57,7 +70,7 @@ async function sendPushToUser(
 
     await Promise.allSettled(
       subscriptions.map((sub) =>
-        webpush.sendNotification(sub.subscription, payload)
+        wp.sendNotification(sub.subscription, payload)
       )
     )
   } catch (error) {
