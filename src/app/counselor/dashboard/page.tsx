@@ -41,6 +41,32 @@ interface Conversation {
   patient: Patient | null
   lastMessage: LastMessage | null
   messageCount: number
+  unreadCount: number
+}
+
+const LAST_READ_STORAGE_KEY = "safespace_last_read"
+
+// Helper to get last read timestamps from localStorage
+function getLastReadTimestamps(): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  try {
+    const stored = localStorage.getItem(LAST_READ_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
+// Helper to mark a conversation as read
+export function markConversationAsRead(conversationId: string) {
+  if (typeof window === "undefined") return
+  try {
+    const timestamps = getLastReadTimestamps()
+    timestamps[conversationId] = new Date().toISOString()
+    localStorage.setItem(LAST_READ_STORAGE_KEY, JSON.stringify(timestamps))
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 interface CounselorInfo {
@@ -106,8 +132,12 @@ export default function CounselorDashboard() {
     }
 
     try {
+      // Get last read timestamps for unread count calculation
+      const lastReadTimestamps = getLastReadTimestamps()
+      const lastReadParam = encodeURIComponent(JSON.stringify(lastReadTimestamps))
+
       const response = await fetch(
-        `/api/counselor/conversations?counselor_id=${counselorInfo.id}&type=all`
+        `/api/counselor/conversations?counselor_id=${counselorInfo.id}&type=all&last_read=${lastReadParam}`
       )
       const data = await response.json()
 
@@ -353,9 +383,17 @@ export default function CounselorDashboard() {
                         title={`${conv.urgency} urgency`}
                       />
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(conv.lastMessage?.created_at || conv.created_at)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(conv.lastMessage?.created_at || conv.created_at)}
+                      </span>
+                      {/* Unread count badge */}
+                      {conv.unreadCount > 0 && (
+                        <span className="min-w-5 h-5 px-1.5 rounded-full bg-green-500 text-white text-xs font-medium flex items-center justify-center">
+                          {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Topic badge */}
@@ -401,7 +439,10 @@ export default function CounselorDashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push(`/counselor/chat/${conv.id}`)}
+                    onClick={() => {
+                      markConversationAsRead(conv.id)
+                      router.push(`/counselor/chat/${conv.id}`)
+                    }}
                     className="shrink-0"
                   >
                     Open

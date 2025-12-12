@@ -7,12 +7,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const counselorId = searchParams.get("counselor_id")
     const type = searchParams.get("type") // 'waiting' | 'active' | 'all'
+    const lastReadJson = searchParams.get("last_read") // JSON: { conversationId: timestamp }
 
     if (!counselorId) {
       return NextResponse.json(
         { error: "Counselor ID is required" },
         { status: 400 }
       )
+    }
+
+    // Parse last read timestamps
+    let lastReadMap: Record<string, string> = {}
+    if (lastReadJson) {
+      try {
+        lastReadMap = JSON.parse(lastReadJson)
+      } catch {
+        // Ignore parse errors
+      }
     }
 
     const supabase = await createClient()
@@ -76,11 +87,32 @@ export async function GET(request: NextRequest) {
           .select("*", { count: "exact", head: true })
           .eq("conversation_id", conv.id)
 
+        // Get unread count (messages from patient since last read)
+        let unreadCount = 0
+        const lastReadTime = lastReadMap[conv.id]
+
+        if (conv.counselor_id === counselorId) {
+          // Only count unread for active conversations assigned to this counselor
+          let unreadQuery = supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .eq("conversation_id", conv.id)
+            .neq("sender_id", counselorId) // Messages from patient
+
+          if (lastReadTime) {
+            unreadQuery = unreadQuery.gt("created_at", lastReadTime)
+          }
+
+          const { count } = await unreadQuery
+          unreadCount = count || 0
+        }
+
         return {
           ...conv,
           patient,
           lastMessage,
           messageCount: messageCount || 0,
+          unreadCount,
         }
       })
     )

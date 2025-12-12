@@ -13,6 +13,7 @@ import { useMessages } from "@/hooks/useMessages"
 import { useNotifications } from "@/hooks/useNotifications"
 import { uploadVoiceNote } from "@/lib/supabase/storage"
 import { cn } from "@/lib/utils"
+import { markConversationAsRead } from "@/app/counselor/dashboard/page"
 import type { Conversation } from "@/types/database"
 
 interface CounselorInfo {
@@ -51,6 +52,7 @@ export default function CounselorChatPage() {
   const [showMenu, setShowMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessagesCountRef = useRef(0)
+  const isInitialLoadRef = useRef(true)
 
   // Store user info map for message rendering
   const [usersMap, setUsersMap] = useState<Map<string, { avatarId?: string; name?: string }>>(
@@ -87,9 +89,23 @@ export default function CounselorChatPage() {
     requestPermission()
   }, [requestPermission])
 
+  // Mark conversation as read when entering and when messages update
+  useEffect(() => {
+    if (conversationId && messages.length > 0) {
+      markConversationAsRead(conversationId)
+    }
+  }, [conversationId, messages])
+
   // Notify when new message from patient arrives
   useEffect(() => {
     if (!counselorInfo || messages.length === 0) return
+
+    // Skip notification on initial load - just record the count
+    if (isInitialLoadRef.current) {
+      prevMessagesCountRef.current = messages.length
+      isInitialLoadRef.current = false
+      return
+    }
 
     // Check if there are new messages
     if (messages.length > prevMessagesCountRef.current) {
