@@ -12,7 +12,10 @@
       "Bash(npm cache clean:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm run build:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(npx web-push:*)"
     ]
   }
 }

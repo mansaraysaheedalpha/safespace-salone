@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { ConversationListSkeleton } from "@/components/ui/skeleton"
 import { useNotifications } from "@/hooks/useNotifications"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { cn } from "@/lib/utils"
 
 interface Patient {
@@ -105,11 +106,25 @@ export default function CounselorDashboard() {
 
   // Notifications
   const { notifyNewConversation, requestPermission } = useNotifications()
+  const { isSupported: pushSupported, subscribe: subscribeToPush } = usePushNotifications()
 
-  // Request notification permission
+  // Request notification permission and subscribe to push
   useEffect(() => {
     requestPermission()
   }, [requestPermission])
+
+  // Subscribe to push notifications when counselor info is available
+  useEffect(() => {
+    if (counselorInfo && pushSupported) {
+      subscribeToPush(counselorInfo.id, "counselor")
+        .then((success) => {
+          if (success) {
+            console.log("[Push] Counselor subscribed to push notifications")
+          }
+        })
+        .catch(console.error)
+    }
+  }, [counselorInfo, pushSupported, subscribeToPush])
 
   // Get counselor info from localStorage
   useEffect(() => {

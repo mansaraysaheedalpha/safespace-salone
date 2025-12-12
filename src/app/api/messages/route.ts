@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import webpush from "web-push"
+
+// Configure web-push with VAPID keys
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(
+    "mailto:support@safespace-salone.com",
+    vapidPublicKey,
+    vapidPrivateKey
+  )
+}
 
 interface CreateMessageRequest {
   conversation_id: string
@@ -7,6 +20,49 @@ interface CreateMessageRequest {
   type: "text" | "voice"
   content?: string
   duration?: number
+}
+
+// Helper to send push notification
+async function sendPushToUser(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  title: string,
+  message: string,
+  url: string
+) {
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    console.log("VAPID keys not configured, skipping push")
+    return
+  }
+
+  try {
+    const { data: subscriptions } = await supabase
+      .from("push_subscriptions")
+      .select("subscription")
+      .eq("user_id", userId)
+
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log("No push subscriptions for user:", userId)
+      return
+    }
+
+    const payload = JSON.stringify({
+      title,
+      body: message,
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-72x72.png",
+      tag: "new-message",
+      data: { url },
+    })
+
+    await Promise.allSettled(
+      subscriptions.map((sub) =>
+        webpush.sendNotification(sub.subscription, payload)
+      )
+    )
+  } catch (error) {
+    console.error("Push notification error:", error)
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -89,6 +145,34 @@ export async function POST(request: NextRequest) {
         { error: "Failed to send message" },
         { status: 500 }
       )
+    }
+
+    // Send push notification to the recipient (don't await to not block response)
+    const recipientId = sender_id === conversation.patient_id
+      ? conversation.counselor_id  // Patient sent message, notify counselor
+      : conversation.patient_id    // Counselor sent message, notify patient
+
+    if (recipientId) {
+      // Get sender info for notification title
+      const { data: sender } = await supabase
+        .from("users")
+        .select("display_name")
+        .eq("id", sender_id)
+        .single()
+
+      const senderName = sender?.display_name || "Someone"
+      const messagePreview = type === "voice"
+        ? "Sent a voice message"
+        : (content?.substring(0, 50) || "Sent a message")
+
+      // Send push in background (fire and forget)
+      sendPushToUser(
+        supabase,
+        recipientId,
+        `New message from ${senderName}`,
+        messagePreview,
+        `/chat/${conversation_id}`
+      ).catch(console.error)
     }
 
     return NextResponse.json({
