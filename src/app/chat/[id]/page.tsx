@@ -43,6 +43,7 @@ export default function ChatPage() {
     error: messagesError,
     sendTextMessage,
     sendVoiceMessage,
+    deleteMessage,
   } = useMessages({
     conversationId,
     userId: userInfo?.id || "",
@@ -210,6 +211,7 @@ export default function ChatPage() {
           messages={messages}
           currentUserId={userInfo?.id || ""}
           getUserInfo={getUserInfo}
+          onDeleteMessage={deleteMessage}
         />
         <div ref={messagesEndRef} />
       </div>

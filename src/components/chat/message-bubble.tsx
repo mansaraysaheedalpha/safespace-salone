@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Play, Pause, Clock, AlertCircle, Check } from "lucide-react"
+import { useState, useMemo, useRef, useEffect } from "react"
+import { Play, Pause, Clock, AlertCircle, Check, Trash2, Loader2 } from "lucide-react"
 import { UserAvatar } from "@/components/user-avatar"
 import { cn } from "@/lib/utils"
 import type { Message } from "@/types/database"
@@ -18,6 +18,7 @@ interface MessageBubbleProps {
   senderAvatarId?: string
   senderName?: string
   showAvatar?: boolean
+  onDelete?: (messageId: string) => void
 }
 
 export function MessageBubble({
@@ -26,9 +27,13 @@ export function MessageBubble({
   senderAvatarId,
   senderName,
   showAvatar = true,
+  onDelete,
 }: MessageBubbleProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackProgress, setPlaybackProgress] = useState(0)
+  const [showDeleteOption, setShowDeleteOption] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const status = (message as ExtendedMessage).status
 
   // Generate consistent waveform bars (memoized to prevent re-renders)
@@ -39,6 +44,16 @@ export function MessageBubble({
       return Math.floor(pseudoRandom * 60 + 30)
     })
   }, [message.id, message.duration])
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -51,31 +66,66 @@ export function MessageBubble({
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
+  const handleDelete = async () => {
+    if (isDeleting || !onDelete) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/messages/${message.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        onDelete(message.id)
+      } else {
+        console.error("Failed to delete message")
+        setIsDeleting(false)
+      }
+    } catch (error) {
+      console.error("Delete error:", error)
+      setIsDeleting(false)
+    }
+  }
+
   const handlePlayVoice = () => {
-    if (isPlaying) {
+    // If already playing, pause it
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause()
       setIsPlaying(false)
-      setPlaybackProgress(0)
       return
     }
 
-    setIsPlaying(true)
-    const duration = (message.duration || 5) * 1000
-    const startTime = Date.now()
+    // Create audio element if it doesn't exist
+    if (!audioRef.current && message.content) {
+      audioRef.current = new Audio(message.content)
 
-    const updateProgress = () => {
-      const elapsed = Date.now() - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      setPlaybackProgress(progress)
-
-      if (progress < 1) {
-        requestAnimationFrame(updateProgress)
-      } else {
+      audioRef.current.onended = () => {
         setIsPlaying(false)
         setPlaybackProgress(0)
       }
+
+      audioRef.current.ontimeupdate = () => {
+        if (audioRef.current && message.duration) {
+          const progress = audioRef.current.currentTime / message.duration
+          setPlaybackProgress(Math.min(progress, 1))
+        }
+      }
+
+      audioRef.current.onerror = () => {
+        console.error("Error playing audio:", message.content)
+        setIsPlaying(false)
+      }
     }
 
-    requestAnimationFrame(updateProgress)
+    // Play the audio
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch((err) => {
+        console.error("Playback error:", err)
+        setIsPlaying(false)
+      })
+      setIsPlaying(true)
+    }
   }
 
   return (
@@ -97,12 +147,38 @@ export function MessageBubble({
       )}
 
       {/* Message content */}
-      <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
+      <div
+        className={cn("flex flex-col group relative", isOwn ? "items-end" : "items-start")}
+        onMouseEnter={() => isOwn && onDelete && setShowDeleteOption(true)}
+        onMouseLeave={() => setShowDeleteOption(false)}
+      >
         {/* Sender name for counselor messages */}
         {!isOwn && senderName && showAvatar && (
           <span className="text-xs text-muted-foreground mb-1.5 ml-1 font-medium">
             {senderName}
           </span>
+        )}
+
+        {/* Delete button - only for own messages */}
+        {isOwn && onDelete && showDeleteOption && !message.id.startsWith("temp-") && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className={cn(
+              "absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full",
+              "bg-destructive/10 hover:bg-destructive/20 text-destructive",
+              "transition-all opacity-0 group-hover:opacity-100",
+              "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-destructive/50",
+              isDeleting && "opacity-50 cursor-not-allowed"
+            )}
+            aria-label="Delete message"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </button>
         )}
 
         {/* Bubble */}

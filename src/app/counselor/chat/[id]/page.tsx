@@ -62,6 +62,7 @@ export default function CounselorChatPage() {
     error: messagesError,
     sendTextMessage,
     sendVoiceMessage,
+    deleteMessage,
   } = useMessages({
     conversationId,
     userId: counselorInfo?.id || "",
@@ -330,6 +331,7 @@ export default function CounselorChatPage() {
           messages={messages}
           currentUserId={counselorInfo?.id || ""}
           getUserInfo={getUserInfo}
+          onDeleteMessage={deleteMessage}
         />
         <div ref={messagesEndRef} />
       </div>

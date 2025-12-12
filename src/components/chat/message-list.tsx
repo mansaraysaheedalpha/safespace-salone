@@ -9,12 +9,14 @@ interface MessageListProps {
   messages: Message[]
   currentUserId: string
   getUserInfo: (userId: string) => { avatarId?: string; name?: string } | undefined
+  onDeleteMessage?: (messageId: string) => void
 }
 
 export function MessageList({
   messages,
   currentUserId,
   getUserInfo,
+  onDeleteMessage,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -100,6 +102,7 @@ export function MessageList({
                 senderAvatarId={senderInfo?.avatarId}
                 senderName={senderInfo?.name}
                 showAvatar={shouldShowAvatar(message, msgIndex, group.messages)}
+                onDelete={onDeleteMessage}
               />
             )
           })}

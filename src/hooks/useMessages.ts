@@ -239,6 +239,11 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
     setMessages((prev) => prev.filter((m) => m.id !== messageId))
   }, [])
 
+  // Delete message (removes from state - API call handled by MessageBubble)
+  const deleteMessage = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId))
+  }, [])
+
   return {
     messages,
     isLoading,
@@ -247,6 +252,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
     sendVoiceMessage,
     retryMessage,
     removeFailedMessage,
+    deleteMessage,
     refetch: fetchMessages,
   }
 }
