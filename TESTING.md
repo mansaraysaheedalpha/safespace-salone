@@ -1,285 +1,161 @@
-# SafeSpace Salone - Testing Guide
+# SafeSpace Salone - How to Test
 
-This guide covers how to test all functionalities of the SafeSpace Salone application.
+## Before You Start
 
-## Prerequisites
-
-1. **Database Setup**
+1. Make sure the database is set up:
    - Run `database/schema.sql` in Supabase SQL Editor
-   - Run `database/seed.sql` to add demo data
+   - Run `database/seed.sql` to add test counselors
 
-2. **Environment**
-   - Ensure `.env.local` has valid Supabase credentials
-   - Run `npm run dev` to start the development server
+2. Start the app:
+   ```bash
+   npm run dev
+   ```
 
-3. **Browser**
-   - Use Chrome/Edge in incognito mode (avoids extension conflicts)
-   - Or disable browser extensions like Grammarly that modify the DOM
-
----
-
-## Test Scenarios
-
-### 1. Landing Page (`/`)
-
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | Navigate to `http://localhost:3000` | Landing page displays with SafeSpace branding |
-| CTA button works | Click "Get Started" or main CTA | Redirects to `/signup` |
-| Animations work | Observe page load | Smooth fade-in animation |
+3. Open `http://localhost:3000` in your browser (use incognito mode to avoid extension issues)
 
 ---
 
-### 2. Patient Signup (`/signup`)
+## Testing as a Patient (Get Support)
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | Navigate to `/signup` | Signup form with avatar picker displays |
-| Avatar selection | Click different avatars | Selected avatar highlights with border |
-| Display name input | Type a name (e.g., "Hopeful Soul") | Input accepts text, character limit works |
-| PIN entry | Enter 4-digit PIN | Each digit appears, auto-advances to next field |
-| PIN confirmation | Re-enter same PIN | Matches and enables submit |
-| PIN mismatch | Enter different confirmation PIN | Shows error message |
-| Form submission | Fill all fields, click "Create Account" | Redirects to `/topics` |
-| Persistence | Refresh page after signup | Still logged in (localStorage) |
+### Step 1: Landing Page
+- Open `http://localhost:3000`
+- You should see the SafeSpace Salone welcome page
+- Click **"Get Support"** button
 
-**Test Data:**
-- Display Name: `Test User`
-- PIN: `1234`
+### Step 2: Create Account
+- You're now on `/signup`
+- Pick any avatar you like (click one)
+- Enter a display name like "Test User"
+- Enter a 4-digit PIN (e.g., 1234)
+- Confirm the same PIN
+- Click **"Create Safe Space"**
 
----
+### Step 3: Choose a Topic
+- You're now on `/topics`
+- You should see "Hi, Test User" at the top
+- Click any topic card (e.g., **"Anxiety & Worry"**)
+- Select an urgency level (e.g., **"It's bothering me"**)
+- Click **"Connect with a Counselor"**
 
-### 3. Topic Selection (`/topics`)
+### Step 4: Chat Room (Waiting)
+- You're now in the chat at `/chat/[some-id]`
+- You should see a message saying you're waiting for a counselor
+- Try sending a text message: type "Hello, I need help" and click Send
+- Your message should appear on the right side (teal color)
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | After signup, land on `/topics` | Shows topic cards in grid |
-| User greeting | Check header | Shows "Hi, [username]" with avatar |
-| Topic selection | Click "Anxiety & Worry" | Transitions to urgency selection |
-| Back navigation | Click "Change topic" | Returns to topic grid |
-| Urgency selection | Select "It's bothering me" | Option highlights |
-| Submit button | Select topic + urgency | "Connect with a Counselor" button appears |
-| Create conversation | Click submit button | Redirects to `/chat/[id]` |
+### Step 5: Test Voice Message
+- Click the **microphone icon** (next to the text input)
+- Allow microphone permission if asked
+- Speak for a few seconds
+- Click the recording area to stop
+- You'll see a preview - click **play** to listen
+- Click the **checkmark** to send, or **trash** to delete
 
----
-
-### 4. Patient Chat (`/chat/[id]`)
-
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | After creating conversation | Chat interface displays |
-| Header info | Check chat header | Shows topic, counselor status |
-| Empty state | New conversation | Shows waiting for counselor message |
-| Send text message | Type message, click send | Message appears in chat (right-aligned, teal) |
-| Message animation | Send a message | Smooth slide-up animation |
-| Voice recording | Click mic button | Recording UI appears |
-| Record voice | Allow mic, speak, tap stop | Shows playback preview |
-| Preview playback | Click play on recorded message | Audio plays back |
-| Send voice | Click checkmark | Voice message appears in chat |
-| Cancel recording | Click X during recording | Returns to text input |
-| Scroll behavior | Send multiple messages | Auto-scrolls to bottom |
-| Timestamps | Check message times | Shows relative time (e.g., "2m ago") |
-
-**Note:** Voice messages require microphone permission.
+**Leave this browser window open. Now open a new incognito window for the counselor.**
 
 ---
 
-### 5. Counselor Login (`/counselor/login`)
+## Testing as a Counselor (I'm a Counselor)
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | Navigate to `/counselor/login` | Login form displays |
-| Empty submission | Click login with empty fields | Shows validation error |
-| Wrong credentials | Enter wrong name/PIN | Shows "Invalid credentials" error |
-| Correct login | Name: `Dr. Hope`, PIN: `1234` | Redirects to `/counselor/dashboard` |
-| Session persistence | Refresh after login | Still logged in |
+### Step 1: Counselor Login
+- Open a NEW incognito window
+- Go to `http://localhost:3000`
+- Click **"I'm a Counselor"**
+- You're now on `/counselor/login`
+- Enter:
+  - Display Name: `Dr. Hope`
+  - PIN: `1234`
+- Click **"Sign In"**
 
-**Demo Credentials:**
-| Name | PIN |
-|------|-----|
-| Dr. Hope | 1234 |
-| Dr. Grace | 5678 |
+### Step 2: Dashboard
+- You're now on `/counselor/dashboard`
+- You should see two tabs: **Waiting** and **Active**
+- In the **Waiting** tab, you should see the conversation from your patient
+- The card shows: patient name, topic (Anxiety), urgency dot, time
 
----
+### Step 3: Accept Conversation
+- Click **"Accept"** on the waiting conversation
+- You're now in the chat with the patient
 
-### 6. Counselor Dashboard (`/counselor/dashboard`)
+### Step 4: Chat with Patient
+- You should see the patient's message(s)
+- Type a reply: "Hello, I'm Dr. Hope. How can I help you today?"
+- Click Send
+- **Check the patient's window** - the message should appear there!
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | After counselor login | Dashboard displays |
-| Tabs display | Check tab bar | "Waiting" and "Active" tabs visible |
-| Waiting count | Check Waiting tab | Shows count badge if conversations exist |
-| Conversation cards | View waiting list | Cards show patient avatar, topic, urgency, time |
-| Urgency indicator | Check conversation card | Colored dot (green/yellow/red) |
-| Accept conversation | Click "Accept" on waiting card | Redirects to counselor chat |
-| Active tab | Switch to Active tab | Shows accepted conversations |
-| Refresh button | Click refresh icon | Reloads conversation list |
-| Empty state | No conversations | Shows appropriate empty message |
+### Step 5: Session Notes
+- Click the **notebook icon** in the header (top right)
+- A panel slides in from the right
+- Type some notes: "Patient reports anxiety symptoms"
+- Click **"Save Notes"**
+- Close the panel (click X)
+- Reopen it - your notes should still be there
 
----
-
-### 7. Counselor Chat (`/counselor/chat/[id]`)
-
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Page loads | Accept a conversation | Chat interface displays |
-| Patient info | Check header | Shows patient name, avatar, topic |
-| Message history | View chat | Shows existing messages |
-| Send message | Type and send | Message appears (right-aligned) |
-| Receive message | Patient sends message | Appears left-aligned with animation |
-| Session notes | Click notes button | Side panel slides in |
-| Save notes | Type notes, click save | Shows "Saved" confirmation |
-| Notes persist | Close and reopen panel | Notes are preserved |
-| Back to dashboard | Click back arrow | Returns to dashboard |
+### Step 6: Test Voice Message
+- Send a voice message as the counselor
+- Check if it appears in the patient's window
 
 ---
 
-### 8. Real-time Messaging
+## Testing Real-Time Sync
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Setup | Open patient chat in one browser, counselor chat in another | Both chats open |
-| Patient to counselor | Send message as patient | Appears in counselor chat within seconds |
-| Counselor to patient | Send message as counselor | Appears in patient chat within seconds |
-| Voice message sync | Send voice as patient | Voice message appears for counselor |
+With both windows open (patient and counselor):
 
-**Tip:** Use two browser windows or incognito + regular mode.
+1. **Patient sends message** → Should appear in counselor's chat within 2-3 seconds
+2. **Counselor sends message** → Should appear in patient's chat within 2-3 seconds
+3. **Either sends voice** → Should sync to the other side
 
 ---
 
-### 9. Offline Support
+## Testing Offline Mode
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Go offline | Disable network (DevTools > Network > Offline) | Yellow "You're offline" banner appears |
-| Send while offline | Try to send a message | Message queued (or error shown) |
-| Come back online | Re-enable network | Green "Back online!" banner briefly shows |
-| Indicator disappears | Wait 2 seconds | Banner fades away |
-
----
-
-### 10. PWA Features
-
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Manifest loads | DevTools > Application > Manifest | Shows app name, icons, theme color |
-| Install prompt | Wait 3 seconds on any page | Install banner may appear (if supported) |
-| Add to home screen | Click install (Chrome: address bar icon) | App installs as PWA |
-| Standalone mode | Open installed PWA | No browser chrome, standalone window |
-| Icons display | Check installed app icon | Shield + heart icon displays |
+1. In Chrome DevTools, go to **Network tab**
+2. Check **"Offline"** checkbox
+3. A yellow banner should appear: "You're offline"
+4. Try to send a message (it may fail or queue)
+5. Uncheck "Offline"
+6. Green banner should briefly show: "Back online!"
 
 ---
 
-### 11. 404 Page
+## Testing 404 Page
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Invalid route | Navigate to `/invalid-page` | Custom 404 page displays |
-| Branding | Check 404 page | Shield icon, SafeSpace message |
-| Navigation | Click "Go Home" | Redirects to `/` |
-| Start chat link | Click "Start a Chat" | Redirects to `/topics` |
+1. Go to `http://localhost:3000/some-random-page`
+2. You should see a custom 404 page with SafeSpace branding
+3. Click **"Go Home"** to return to the landing page
 
 ---
 
-### 12. Mobile Responsiveness
+## Testing Mobile View
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Mobile view | DevTools > Toggle device toolbar > iPhone SE (375px) | All pages fit without horizontal scroll |
-| Touch targets | Check buttons/inputs | Minimum 44px tap targets |
-| Chat input | View chat on mobile | Input stays at bottom, keyboard-friendly |
-| Topic cards | View topics on mobile | 2-column grid, readable text |
-| Modals/panels | Open session notes on mobile | Full-width, usable |
+1. Open Chrome DevTools (F12)
+2. Click the **device toolbar** icon (or Ctrl+Shift+M)
+3. Select **iPhone SE** or set width to **375px**
+4. Navigate through the app - everything should fit without horizontal scrolling
 
 ---
 
-### 13. Loading States
+## Quick Checklist
 
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Chat loading | Navigate to chat | Message skeleton shows while loading |
-| Dashboard loading | Navigate to dashboard | Conversation skeletons display |
-| Topics loading | Navigate to topics | Topic card skeletons briefly show |
-
----
-
-### 14. Error Handling
-
-| Test | Steps | Expected Result |
-|------|-------|-----------------|
-| Invalid conversation | Go to `/chat/invalid-id` | Error message or redirect |
-| API failure | Disconnect Supabase | Error fallback UI displays |
-| Form errors | Submit invalid data | Inline error messages |
+- [ ] Patient can sign up with avatar and PIN
+- [ ] Patient can select topic and urgency
+- [ ] Patient can send text messages
+- [ ] Patient can send voice messages
+- [ ] Counselor can log in (Dr. Hope / 1234)
+- [ ] Counselor sees waiting conversations
+- [ ] Counselor can accept and chat
+- [ ] Counselor can save session notes
+- [ ] Messages sync between patient and counselor
+- [ ] Offline banner appears when disconnected
+- [ ] 404 page shows for invalid URLs
+- [ ] Mobile view looks good at 375px width
 
 ---
 
-## Quick Test Checklist
+## Test Accounts
 
-### Happy Path Flow
-
-1. [ ] Open app at `localhost:3000`
-2. [ ] Click "Get Started" → Signup page
-3. [ ] Pick avatar, enter name "Test User", PIN "1234"
-4. [ ] Select "Anxiety" topic, "Normal" urgency
-5. [ ] Arrive at chat, send "Hello, I need help"
-6. [ ] Open new incognito window → `/counselor/login`
-7. [ ] Login as "Dr. Hope" / "1234"
-8. [ ] See waiting conversation, click "Accept"
-9. [ ] Send reply "Hello, I'm here to help"
-10. [ ] Verify message appears in patient's chat
-11. [ ] Open session notes, add "Patient seems anxious"
-12. [ ] Test voice message (both directions)
-13. [ ] Test offline indicator (toggle network)
-14. [ ] Test mobile view (375px width)
-15. [ ] Test 404 page (`/nonexistent`)
-
----
-
-## Troubleshooting
-
-### Hydration Errors
-- **Cause:** Browser extensions (Grammarly, etc.) modifying DOM
-- **Fix:** Test in incognito mode or disable extensions
-
-### Database Errors
-- **Cause:** Missing tables or RLS policies
-- **Fix:** Run `schema.sql` again, ensure RLS is disabled for demo
-
-### Voice Recording Not Working
-- **Cause:** No microphone permission
-- **Fix:** Allow microphone in browser prompt
-
-### Messages Not Syncing
-- **Cause:** Supabase realtime not configured
-- **Fix:** Check Supabase dashboard for realtime settings
-
-### PWA Not Installing
-- **Cause:** Not served over HTTPS (localhost is exception)
-- **Fix:** Deploy to Vercel or use `localhost`
-
----
-
-## Test Accounts Summary
-
-| Role | Name | PIN | Login URL |
-|------|------|-----|-----------|
-| Counselor | Dr. Hope | 1234 | `/counselor/login` |
-| Counselor | Dr. Grace | 5678 | `/counselor/login` |
-| Patient | (Create new) | Any 4 digits | `/signup` |
-
----
-
-## Browser Compatibility
-
-| Browser | Status | Notes |
-|---------|--------|-------|
-| Chrome 90+ | Supported | Full PWA support |
-| Firefox 90+ | Supported | Limited PWA support |
-| Safari 15+ | Supported | PWA install from share menu |
-| Edge 90+ | Supported | Full PWA support |
-| Mobile Chrome | Supported | Best PWA experience |
-| Mobile Safari | Supported | Add to Home Screen |
-
----
-
-*Last updated: December 2024*
+| Role | Name | PIN |
+|------|------|-----|
+| Counselor | Dr. Hope | 1234 |
+| Counselor | Dr. Grace | 5678 |
+| Patient | Create your own | Any 4 digits |
