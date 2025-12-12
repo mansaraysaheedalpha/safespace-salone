@@ -11,7 +11,9 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Empty turbopack config to acknowledge Turbopack is being used
+  // The PWA plugin uses webpack, but it's disabled in development anyway
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);
