@@ -31,7 +31,6 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackProgress, setPlaybackProgress] = useState(0)
-  const [showDeleteOption, setShowDeleteOption] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const status = (message as ExtendedMessage).status
@@ -147,10 +146,7 @@ export function MessageBubble({
       )}
 
       {/* Message content */}
-      <div
-        className={cn("flex flex-col relative", isOwn ? "items-end" : "items-start")}
-        onClick={() => isOwn && onDelete && !message.id.startsWith("temp-") && setShowDeleteOption(!showDeleteOption)}
-      >
+      <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
         {/* Sender name for counselor messages */}
         {!isOwn && senderName && showAvatar && (
           <span className="text-xs text-muted-foreground mb-1.5 ml-1 font-medium">
@@ -158,41 +154,18 @@ export function MessageBubble({
           </span>
         )}
 
-        {/* Delete button - shown when message is tapped */}
-        {isOwn && onDelete && showDeleteOption && !message.id.startsWith("temp-") && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleDelete()
-            }}
-            disabled={isDeleting}
+        {/* Bubble row with delete button */}
+        <div className={cn("flex items-center gap-2", isOwn && "flex-row-reverse")}>
+          {/* Bubble */}
+          <div
             className={cn(
-              "absolute -top-8 right-0 px-3 py-1.5 rounded-lg flex items-center gap-1.5",
-              "bg-destructive text-destructive-foreground text-xs font-medium",
-              "shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200",
-              isDeleting && "opacity-50 cursor-not-allowed"
+              "relative px-4 py-3 shadow-sm",
+              // Rounded corners with tail
+              isOwn
+                ? "rounded-2xl rounded-br-md bg-primary text-primary-foreground shadow-primary/10"
+                : "rounded-2xl rounded-bl-md bg-muted text-foreground shadow-black/5"
             )}
-            aria-label="Delete message"
           >
-            {isDeleting ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Trash2 className="w-3 h-3" />
-            )}
-            {isDeleting ? "Deleting..." : "Delete"}
-          </button>
-        )}
-
-        {/* Bubble */}
-        <div
-          className={cn(
-            "relative px-4 py-3 shadow-sm",
-            // Rounded corners with tail
-            isOwn
-              ? "rounded-2xl rounded-br-md bg-primary text-primary-foreground shadow-primary/10"
-              : "rounded-2xl rounded-bl-md bg-muted text-foreground shadow-black/5"
-          )}
-        >
           {message.type === "text" ? (
             // Text message
             <div className="relative">
@@ -304,6 +277,27 @@ export function MessageBubble({
                   )}
                 </span>
               </div>
+            </button>
+          )}
+          </div>
+
+          {/* Delete button - always visible for own messages */}
+          {isOwn && onDelete && !message.id.startsWith("temp-") && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={cn(
+                "p-1.5 rounded-full transition-all",
+                "text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10",
+                isDeleting && "opacity-50 cursor-not-allowed"
+              )}
+              aria-label="Delete message"
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
             </button>
           )}
         </div>
