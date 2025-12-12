@@ -1,31 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="256" fill="#0f172a"/>
+  <!-- Background with rounded corners for app icon -->
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
 
-  <!-- Inner circle with gradient -->
-  <circle cx="256" cy="256" r="200" fill="#1e293b"/>
+  <!-- Subtle inner glow -->
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="#1e293b" opacity="0.5"/>
 
-  <!-- Shield icon -->
+  <!-- Shield shape - main element -->
   <path
-    d="M256 100c-60 0-120 30-120 30v120c0 80 60 140 120 162 60-22 120-82 120-162V130s-60-30-120-30z"
+    d="M256 80c-72 0-128 28-128 28v132c0 88 64 152 128 176 64-24 128-88 128-176V108s-56-28-128-28z"
     fill="#14b8a6"
-    opacity="0.9"
   />
 
-  <!-- Checkmark -->
+  <!-- Shield highlight/depth -->
   <path
-    d="M220 260l30 30 60-60"
-    stroke="#ffffff"
-    stroke-width="20"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    fill="none"
+    d="M256 104c-56 0-104 22-104 22v116c0 72 52 124 104 144V104z"
+    fill="#0d9488"
   />
 
-  <!-- Heart accent -->
+  <!-- Heart symbol inside shield -->
   <path
-    d="M256 340c-20-15-60-50-60-80 0-20 15-35 35-35 15 0 25 10 25 10s10-10 25-10c20 0 35 15 35 35 0 30-40 65-60 80z"
-    fill="#f472b6"
-    opacity="0.8"
+    d="M256 320c-32-24-72-64-72-104 0-24 18-42 42-42 14 0 24 8 30 14 6-6 16-14 30-14 24 0 42 18 42 42 0 40-40 80-72 104z"
+    fill="#ffffff"
   />
+
+  <!-- Small highlight on heart -->
+  <ellipse cx="220" cy="194" rx="8" ry="10" fill="#ffffff" opacity="0.4"/>
 </svg>
