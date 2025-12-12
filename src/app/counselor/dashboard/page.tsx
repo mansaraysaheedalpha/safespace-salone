@@ -8,7 +8,8 @@ import {
   Users,
   AlertCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
@@ -282,18 +283,33 @@ export default function CounselorDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Your Conversations</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Help those who need support
+            {counselorInfo ? `Welcome, ${counselorInfo.displayName}` : "Help those who need support"}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchConversations(true)}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchConversations(true)}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem("safespace_counselor_session")
+              localStorage.removeItem("safespace_counselor_info")
+              router.push("/counselor/login")
+            }}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1">Logout</span>
+          </Button>
+        </div>
       </div>
 
       {/* Error message */}
@@ -370,7 +386,7 @@ export default function CounselorDashboard() {
       ) : (
         <div className="space-y-3">
           {displayedConversations.map((conv) => (
-            <button
+            <div
               key={conv.id}
               onClick={() => {
                 if (activeTab === "active") {
@@ -378,7 +394,8 @@ export default function CounselorDashboard() {
                   router.push(`/counselor/chat/${conv.id}`)
                 }
               }}
-              disabled={activeTab === "waiting"}
+              role={activeTab === "active" ? "button" : undefined}
+              tabIndex={activeTab === "active" ? 0 : undefined}
               className={cn(
                 "w-full text-left bg-card border border-border rounded-xl p-4 transition-colors",
                 activeTab === "active"
@@ -467,7 +484,7 @@ export default function CounselorDashboard() {
                   </Button>
                 )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
