@@ -148,9 +148,8 @@ export function MessageBubble({
 
       {/* Message content */}
       <div
-        className={cn("flex flex-col group relative", isOwn ? "items-end" : "items-start")}
-        onMouseEnter={() => isOwn && onDelete && setShowDeleteOption(true)}
-        onMouseLeave={() => setShowDeleteOption(false)}
+        className={cn("flex flex-col relative", isOwn ? "items-end" : "items-start")}
+        onClick={() => isOwn && onDelete && !message.id.startsWith("temp-") && setShowDeleteOption(!showDeleteOption)}
       >
         {/* Sender name for counselor messages */}
         {!isOwn && senderName && showAvatar && (
@@ -159,25 +158,28 @@ export function MessageBubble({
           </span>
         )}
 
-        {/* Delete button - only for own messages */}
+        {/* Delete button - shown when message is tapped */}
         {isOwn && onDelete && showDeleteOption && !message.id.startsWith("temp-") && (
           <button
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDelete()
+            }}
             disabled={isDeleting}
             className={cn(
-              "absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full",
-              "bg-destructive/10 hover:bg-destructive/20 text-destructive",
-              "transition-all opacity-0 group-hover:opacity-100",
-              "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-destructive/50",
+              "absolute -top-8 right-0 px-3 py-1.5 rounded-lg flex items-center gap-1.5",
+              "bg-destructive text-destructive-foreground text-xs font-medium",
+              "shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200",
               isDeleting && "opacity-50 cursor-not-allowed"
             )}
             aria-label="Delete message"
           >
             {isDeleting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3 h-3 animate-spin" />
             ) : (
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3" />
             )}
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         )}
 
