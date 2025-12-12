@@ -29,15 +29,23 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Get counselor's expertise areas
-    const { data: expertiseData } = await supabase
-      .from("counselor_expertise")
-      .select("expertise")
-      .eq("counselor_id", counselorId)
+    // Get counselor's expertise areas (gracefully handle if table doesn't exist)
+    let counselorExpertise: string[] = []
+    try {
+      const { data: expertiseData, error: expertiseError } = await supabase
+        .from("counselor_expertise")
+        .select("expertise")
+        .eq("counselor_id", counselorId)
 
-    const counselorExpertise = expertiseData?.map((e) => e.expertise) || []
+      if (!expertiseError && expertiseData) {
+        counselorExpertise = expertiseData.map((e) => e.expertise)
+      }
+    } catch {
+      // Table doesn't exist yet, continue without expertise filtering
+      console.log("counselor_expertise table not found, skipping expertise filter")
+    }
 
-    // Fetch conversations
+    // Fetch conversations - use basic columns that always exist
     let query = supabase
       .from("conversations")
       .select(`
@@ -47,7 +55,6 @@ export async function GET(request: NextRequest) {
         topic,
         urgency,
         status,
-        assigned_counselor_only,
         created_at
       `)
       .eq("status", "active")
@@ -55,7 +62,6 @@ export async function GET(request: NextRequest) {
 
     // Filter by type
     if (type === "waiting") {
-      // Show unassigned conversations OR assigned but not locked to specific counselor
       query = query.is("counselor_id", null)
     } else if (type === "active") {
       query = query.eq("counselor_id", counselorId)
@@ -74,27 +80,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Filter waiting conversations by expertise match
+    // Filter waiting conversations by expertise match (only if expertise is set)
     const filteredConversations = (conversations || []).filter((conv) => {
       // Active conversations (assigned to this counselor) - always show
       if (conv.counselor_id === counselorId) {
         return true
       }
 
-      // Waiting conversations - filter by expertise match
+      // Waiting conversations - filter by expertise match if counselor has expertise set
       if (!conv.counselor_id) {
-        // If conversation is locked to a specific counselor, don't show
-        if (conv.assigned_counselor_only) {
-          return false
-        }
-
-        // Check if conversation topic matches counselor's expertise
-        const topicExpertise = getExpertiseForTopic(conv.topic || "other")
-
         // If counselor has no expertise set, show all conversations (legacy support)
         if (counselorExpertise.length === 0) {
           return true
         }
+
+        // Check if conversation topic matches counselor's expertise
+        const topicExpertise = getExpertiseForTopic(conv.topic || "other")
 
         // Show if topic matches any of counselor's expertise areas
         // Also show if counselor has "general" expertise (catch-all)
@@ -224,12 +225,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Get counselor's expertise to verify they can accept this conversation
-    const { data: expertiseData } = await supabase
-      .from("counselor_expertise")
-      .select("expertise")
-      .eq("counselor_id", counselor_id)
+    let counselorExpertise: string[] = []
+    try {
+      const { data: expertiseData } = await supabase
+        .from("counselor_expertise")
+        .select("expertise")
+        .eq("counselor_id", counselor_id)
 
-    const counselorExpertise = expertiseData?.map((e) => e.expertise) || []
+      if (expertiseData) {
+        counselorExpertise = expertiseData.map((e) => e.expertise)
+      }
+    } catch {
+      // Table doesn't exist yet, skip expertise check
+    }
+
     const topicExpertise = getExpertiseForTopic(existing.topic || "other")
 
     // Check expertise match (skip for legacy counselors with no expertise set)
@@ -246,12 +255,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Assign counselor and lock the conversation
+    // Assign counselor to the conversation
     const { data: conversation, error } = await supabase
       .from("conversations")
       .update({
         counselor_id,
-        assigned_counselor_only: true, // Lock to this counselor
       })
       .eq("id", conversation_id)
       .select("id, patient_id, counselor_id, topic, urgency, status, created_at")
