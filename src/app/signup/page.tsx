@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -369,7 +370,7 @@ export default function SignupPage() {
         )}
 
         {/* Action button */}
-        <div className="w-full mt-auto pt-8">
+        <div className="w-full mt-auto pt-8 space-y-4">
           {step < 3 ? (
             <Button
               onClick={nextStep}
@@ -394,6 +395,14 @@ export default function SignupPage() {
               )}
             </Button>
           )}
+
+          {/* Login link */}
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary hover:underline font-medium">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>

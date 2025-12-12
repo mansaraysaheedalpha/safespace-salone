@@ -16,6 +16,8 @@
 
 ## Testing as a Patient (Get Support)
 
+### Option A: New Patient (First Time)
+
 ### Step 1: Landing Page
 - Open `http://localhost:3000`
 - You should see the SafeSpace Salone welcome page
@@ -51,6 +53,15 @@
 - Click the **checkmark** to send, or **trash** to delete
 
 **Leave this browser window open. Now open a new incognito window for the counselor.**
+
+### Option B: Returning Patient (Already have an account)
+
+- Open `http://localhost:3000`
+- Click **"I already have an account"**
+- Enter your display name and PIN
+- Click **"Sign In"**
+- If you have an active conversation, you'll go directly to the chat
+- If not, you'll go to the topics page to start a new conversation
 
 ---
 
@@ -140,6 +151,8 @@ With both windows open (patient and counselor):
 ## Quick Checklist
 
 - [ ] Patient can sign up with avatar and PIN
+- [ ] Patient can log in with existing account
+- [ ] Returning patient continues to active chat
 - [ ] Patient can select topic and urgency
 - [ ] Patient can send text messages
 - [ ] Patient can send voice messages

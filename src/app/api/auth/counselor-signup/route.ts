@@ -31,21 +31,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Check if counselor with same name already exists
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("display_name", display_name)
-      .eq("role", "counselor")
-      .single()
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "A counselor with this name already exists" },
-        { status: 409 }
-      )
-    }
-
     // Hash the PIN
     const pin_hash = await hashPin(pin)
 

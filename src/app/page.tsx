@@ -49,6 +49,17 @@ export default function LandingPage() {
 
           <Button
             asChild
+            variant="outline"
+            size="lg"
+            className="w-full h-12 text-foreground hover:bg-secondary/50 rounded-xl transition-all"
+          >
+            <Link href="/login">
+              I already have an account
+            </Link>
+          </Button>
+
+          <Button
+            asChild
             variant="ghost"
             size="lg"
             className="w-full h-12 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-xl transition-all"
