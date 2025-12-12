@@ -48,7 +48,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
     // Fetch initial messages
     fetchMessages()
 
-    // Subscribe to new messages
+    // Subscribe to new messages and updates
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -91,6 +91,25 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
           })
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updatedMessage = payload.new as Message
+
+          // Update the message in state (for read receipts, etc.)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m
+            )
+          )
+        }
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -105,7 +124,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
 
   // Send text message with optimistic update
   const sendTextMessage = useCallback(
-    async (content: string) => {
+    async (content: string, replyToId?: string) => {
       const tempId = `temp-${Date.now()}`
       const tempMessage: SendingMessage = {
         id: tempId,
@@ -116,6 +135,8 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         duration: null,
         created_at: new Date().toISOString(),
         status: "sending",
+        reply_to_id: replyToId || null,
+        read_at: null,
       }
 
       // Optimistic update
@@ -130,6 +151,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
             sender_id: userId,
             type: "text",
             content,
+            reply_to_id: replyToId || null,
           }),
         })
 
@@ -161,7 +183,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
 
   // Send voice message with optimistic update
   const sendVoiceMessage = useCallback(
-    async (duration: number, audioUrl?: string) => {
+    async (duration: number, audioUrl?: string, replyToId?: string) => {
       const tempId = `temp-${Date.now()}`
       const tempMessage: SendingMessage = {
         id: tempId,
@@ -172,6 +194,8 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         duration,
         created_at: new Date().toISOString(),
         status: "sending",
+        reply_to_id: replyToId || null,
+        read_at: null,
       }
 
       // Optimistic update
@@ -187,6 +211,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
             type: "voice",
             content: audioUrl || "[Voice message]",
             duration,
+            reply_to_id: replyToId || null,
           }),
         })
 

@@ -370,9 +370,21 @@ export default function CounselorDashboard() {
       ) : (
         <div className="space-y-3">
           {displayedConversations.map((conv) => (
-            <div
+            <button
               key={conv.id}
-              className="bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
+              onClick={() => {
+                if (activeTab === "active") {
+                  markConversationAsRead(conv.id)
+                  router.push(`/counselor/chat/${conv.id}`)
+                }
+              }}
+              disabled={activeTab === "waiting"}
+              className={cn(
+                "w-full text-left bg-card border border-border rounded-xl p-4 transition-colors",
+                activeTab === "active"
+                  ? "hover:bg-muted/50 cursor-pointer active:scale-[0.99]"
+                  : "cursor-default"
+              )}
             >
               <div className="flex items-start gap-4">
                 {/* Patient avatar */}
@@ -436,11 +448,14 @@ export default function CounselorDashboard() {
                   )}
                 </div>
 
-                {/* Action button */}
-                {activeTab === "waiting" ? (
+                {/* Accept button - only for waiting tab */}
+                {activeTab === "waiting" && (
                   <Button
                     size="sm"
-                    onClick={() => handleAccept(conv.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleAccept(conv.id)
+                    }}
                     disabled={acceptingId === conv.id}
                     className="shrink-0"
                   >
@@ -450,21 +465,9 @@ export default function CounselorDashboard() {
                       "Accept"
                     )}
                   </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      markConversationAsRead(conv.id)
-                      router.push(`/counselor/chat/${conv.id}`)
-                    }}
-                    className="shrink-0"
-                  >
-                    Open
-                  </Button>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

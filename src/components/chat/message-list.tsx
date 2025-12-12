@@ -1,22 +1,29 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo, useCallback, memo } from "react"
 import { MessageCircle } from "lucide-react"
 import { MessageBubble } from "./message-bubble"
-import type { Message } from "@/types/database"
+import type { Message, ReplyToMessage } from "@/types/database"
+
+interface ExtendedMessage extends Message {
+  replyTo?: ReplyToMessage | null
+  status?: "sending" | "sent" | "error"
+}
 
 interface MessageListProps {
-  messages: Message[]
+  messages: (Message | ExtendedMessage)[]
   currentUserId: string
   getUserInfo: (userId: string) => { avatarId?: string; name?: string } | undefined
   onDeleteMessage?: (messageId: string) => void
+  onReplyMessage?: (message: ReplyToMessage) => void
 }
 
-export function MessageList({
+export const MessageList = memo(function MessageList({
   messages,
   currentUserId,
   getUserInfo,
   onDeleteMessage,
+  onReplyMessage,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -26,12 +33,19 @@ export function MessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Group messages by date
-  const groupMessagesByDate = (msgs: Message[]) => {
-    const groups: { date: string; messages: Message[] }[] = []
+  // Create a map for quick message lookup (for reply references)
+  const messageMap = useMemo(() => {
+    const map = new Map<string, Message | ExtendedMessage>()
+    messages.forEach(msg => map.set(msg.id, msg))
+    return map
+  }, [messages])
+
+  // Group messages by date - memoized for performance
+  const messageGroups = useMemo(() => {
+    const groups: { date: string; messages: (Message | ExtendedMessage)[] }[] = []
     let currentDate = ""
 
-    msgs.forEach((msg) => {
+    messages.forEach((msg) => {
       const msgDate = new Date(msg.created_at).toLocaleDateString([], {
         weekday: "long",
         month: "short",
@@ -47,15 +61,32 @@ export function MessageList({
     })
 
     return groups
-  }
+  }, [messages])
 
-  const messageGroups = groupMessagesByDate(messages)
+  // Get reply info for a message - memoized callback
+  const getReplyTo = useCallback((msg: Message | ExtendedMessage): ReplyToMessage | null => {
+    if (!msg.reply_to_id) return null
+
+    // First check if replyTo is already populated
+    if ('replyTo' in msg && msg.replyTo) return msg.replyTo
+
+    // Otherwise look it up in the message map
+    const replyMsg = messageMap.get(msg.reply_to_id)
+    if (!replyMsg) return null
+
+    return {
+      id: replyMsg.id,
+      content: replyMsg.content || "",
+      type: replyMsg.type,
+      sender_id: replyMsg.sender_id,
+    }
+  }, [messageMap])
 
   // Check if should show avatar (first message or different sender)
-  const shouldShowAvatar = (msg: Message, index: number, groupMsgs: Message[]) => {
+  const shouldShowAvatar = useCallback((msg: Message | ExtendedMessage, index: number, groupMsgs: (Message | ExtendedMessage)[]) => {
     if (index === 0) return true
     return groupMsgs[index - 1].sender_id !== msg.sender_id
-  }
+  }, [])
 
   if (messages.length === 0) {
     return (
@@ -94,15 +125,22 @@ export function MessageList({
             const isOwn = message.sender_id === currentUserId
             const senderInfo = getUserInfo(message.sender_id)
 
+            // Add replyTo info to the message
+            const messageWithReply = {
+              ...message,
+              replyTo: getReplyTo(message),
+            }
+
             return (
               <MessageBubble
                 key={message.id}
-                message={message}
+                message={messageWithReply}
                 isOwn={isOwn}
                 senderAvatarId={senderInfo?.avatarId}
                 senderName={senderInfo?.name}
                 showAvatar={shouldShowAvatar(message, msgIndex, group.messages)}
                 onDelete={onDeleteMessage}
+                onReply={onReplyMessage}
               />
             )
           })}
@@ -113,4 +151,4 @@ export function MessageList({
       <div ref={bottomRef} />
     </div>
   )
-}
+})

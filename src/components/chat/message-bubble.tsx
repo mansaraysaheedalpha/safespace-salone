@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useMemo, useRef, useEffect } from "react"
-import { Play, Pause, Clock, AlertCircle, Check, Trash2, Loader2 } from "lucide-react"
+import { useState, useMemo, useRef, useEffect, memo } from "react"
+import { Play, Pause, Clock, AlertCircle, Check, CheckCheck, Trash2, Loader2, Reply } from "lucide-react"
 import { UserAvatar } from "@/components/user-avatar"
 import { cn } from "@/lib/utils"
-import type { Message } from "@/types/database"
+import type { Message, ReplyToMessage } from "@/types/database"
 
 type MessageStatus = "sending" | "sent" | "error" | undefined
 
 interface ExtendedMessage extends Message {
   status?: MessageStatus
+  replyTo?: ReplyToMessage | null
 }
 
 interface MessageBubbleProps {
@@ -19,15 +20,17 @@ interface MessageBubbleProps {
   senderName?: string
   showAvatar?: boolean
   onDelete?: (messageId: string) => void
+  onReply?: (message: ReplyToMessage) => void
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   senderAvatarId,
   senderName,
   showAvatar = true,
   onDelete,
+  onReply,
 }: MessageBubbleProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackProgress, setPlaybackProgress] = useState(0)
@@ -86,6 +89,20 @@ export function MessageBubble({
     }
   }
 
+  const handleReply = () => {
+    if (onReply && !message.id.startsWith("temp-")) {
+      onReply({
+        id: message.id,
+        content: message.content || "",
+        type: message.type,
+        sender_id: message.sender_id,
+      })
+    }
+  }
+
+  // Check if message has been read (for own messages)
+  const isRead = isOwn && message.read_at !== null
+
   const handlePlayVoice = () => {
     // If already playing, pause it
     if (isPlaying && audioRef.current) {
@@ -130,7 +147,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "flex gap-2.5 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "flex gap-2.5 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300 group",
         isOwn ? "ml-auto flex-row-reverse" : "mr-auto"
       )}
     >
@@ -156,6 +173,17 @@ export function MessageBubble({
 
         {/* Bubble row with delete button */}
         <div className={cn("flex items-center gap-2", isOwn && "flex-row-reverse")}>
+          {/* Reply button - shown on left for own messages, right for others */}
+          {onReply && !message.id.startsWith("temp-") && !isOwn && (
+            <button
+              onClick={handleReply}
+              className="p-1.5 rounded-full text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
+              aria-label="Reply to message"
+            >
+              <Reply className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Bubble */}
           <div
             className={cn(
@@ -166,6 +194,31 @@ export function MessageBubble({
                 : "rounded-2xl rounded-bl-md bg-muted text-foreground shadow-black/5"
             )}
           >
+          {/* Replied message preview */}
+          {message.replyTo && (
+            <div
+              className={cn(
+                "mb-2 px-3 py-2 rounded-lg border-l-2 -mx-1",
+                isOwn
+                  ? "bg-primary-foreground/10 border-primary-foreground/40"
+                  : "bg-background/50 border-primary/60"
+              )}
+            >
+              <p className={cn(
+                "text-xs font-medium mb-0.5",
+                isOwn ? "text-primary-foreground/70" : "text-primary"
+              )}>
+                {message.replyTo.sender_id === message.sender_id ? "You" : "Reply"}
+              </p>
+              <p className={cn(
+                "text-xs truncate",
+                isOwn ? "text-primary-foreground/60" : "text-muted-foreground"
+              )}>
+                {message.replyTo.type === "voice" ? "🎤 Voice message" : message.replyTo.content}
+              </p>
+            </div>
+          )}
+
           {message.type === "text" ? (
             // Text message
             <div className="relative">
@@ -187,7 +240,11 @@ export function MessageBubble({
                   <AlertCircle className="w-3 h-3 text-destructive" />
                 )}
                 {isOwn && (status === "sent" || !status) && !message.id.startsWith("temp-") && (
-                  <Check className="w-3 h-3" />
+                  isRead ? (
+                    <CheckCheck className="w-3 h-3 text-blue-400" />
+                  ) : (
+                    <Check className="w-3 h-3" />
+                  )
                 )}
               </span>
             </div>
@@ -273,7 +330,11 @@ export function MessageBubble({
                     <AlertCircle className="w-2.5 h-2.5 text-destructive" />
                   )}
                   {isOwn && (status === "sent" || !status) && !message.id.startsWith("temp-") && (
-                    <Check className="w-2.5 h-2.5" />
+                    isRead ? (
+                      <CheckCheck className="w-2.5 h-2.5 text-blue-400" />
+                    ) : (
+                      <Check className="w-2.5 h-2.5" />
+                    )
                   )}
                 </span>
               </div>
@@ -281,27 +342,42 @@ export function MessageBubble({
           )}
           </div>
 
-          {/* Delete button - always visible for own messages */}
-          {isOwn && onDelete && !message.id.startsWith("temp-") && (
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className={cn(
-                "p-1.5 rounded-full transition-all",
-                "text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10",
-                isDeleting && "opacity-50 cursor-not-allowed"
+          {/* Action buttons for own messages */}
+          {isOwn && !message.id.startsWith("temp-") && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Reply button */}
+              {onReply && (
+                <button
+                  onClick={handleReply}
+                  className="p-1.5 rounded-full text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-all"
+                  aria-label="Reply to message"
+                >
+                  <Reply className="w-4 h-4" />
+                </button>
               )}
-              aria-label="Delete message"
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
+              {/* Delete button */}
+              {onDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className={cn(
+                    "p-1.5 rounded-full transition-all",
+                    "text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10",
+                    isDeleting && "opacity-50 cursor-not-allowed"
+                  )}
+                  aria-label="Delete message"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           )}
         </div>
       </div>
     </div>
   )
-}
+})

@@ -11,10 +11,11 @@ import { UserAvatar } from "@/components/user-avatar"
 import { SessionNotesPanel } from "@/components/counselor/session-notes-panel"
 import { useMessages } from "@/hooks/useMessages"
 import { useNotifications } from "@/hooks/useNotifications"
+import { usePresence, useUserPresence } from "@/hooks/usePresence"
 import { uploadVoiceNote } from "@/lib/supabase/storage"
 import { cn } from "@/lib/utils"
 import { markConversationAsRead } from "@/app/counselor/dashboard/page"
-import type { Conversation } from "@/types/database"
+import type { Conversation, ReplyToMessage } from "@/types/database"
 
 interface CounselorInfo {
   id: string
@@ -50,6 +51,7 @@ export default function CounselorChatPage() {
   const [isSendingVoice, setIsSendingVoice] = useState(false)
   const [isNotesOpen, setIsNotesOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<ReplyToMessage | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessagesCountRef = useRef(0)
   const isInitialLoadRef = useRef(true)
@@ -61,6 +63,12 @@ export default function CounselorChatPage() {
 
   // Notifications
   const { notifyNewMessage, requestPermission } = useNotifications()
+
+  // Track counselor's presence
+  usePresence({ userId: counselorInfo?.id || "", enabled: !!counselorInfo })
+
+  // Get patient's presence for online status display
+  const { isOnline: patientOnline, lastSeenFormatted: patientLastSeen } = useUserPresence(patientInfo?.id ?? null)
 
   // Use the messages hook
   const {
@@ -95,6 +103,39 @@ export default function CounselorChatPage() {
       markConversationAsRead(conversationId)
     }
   }, [conversationId, messages])
+
+  // Mark received messages as read (for read receipts)
+  useEffect(() => {
+    if (!counselorInfo || messages.length === 0) return
+
+    // Find unread messages from the patient (not from counselor)
+    const unreadMessages = messages.filter(
+      (msg) =>
+        msg.sender_id !== counselorInfo.id &&
+        !msg.id.startsWith("temp-") &&
+        !msg.read_at
+    )
+
+    if (unreadMessages.length === 0) return
+
+    // Mark them as read via API
+    const markAsRead = async () => {
+      try {
+        await fetch("/api/messages/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message_ids: unreadMessages.map((m) => m.id),
+            reader_id: counselorInfo.id,
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to mark messages as read:", err)
+      }
+    }
+
+    markAsRead()
+  }, [messages, counselorInfo])
 
   // Notify when new message from patient arrives
   useEffect(() => {
@@ -196,17 +237,17 @@ export default function CounselorChatPage() {
     loadData()
   }, [conversationId, counselorInfo, router])
 
-  const handleSendText = async (content: string) => {
+  const handleSendText = async (content: string, replyToId?: string) => {
     if (!counselorInfo) return
 
     try {
-      await sendTextMessage(content)
+      await sendTextMessage(content, replyToId)
     } catch (err) {
       console.error("Send text error:", err)
     }
   }
 
-  const handleSendVoice = async (duration: number, audioBlob?: Blob) => {
+  const handleSendVoice = async (duration: number, audioBlob?: Blob, replyToId?: string) => {
     if (!counselorInfo) return
 
     setIsSendingVoice(true)
@@ -222,12 +263,20 @@ export default function CounselorChatPage() {
         }
       }
 
-      await sendVoiceMessage(duration, audioUrl)
+      await sendVoiceMessage(duration, audioUrl, replyToId)
     } catch (err) {
       console.error("Send voice error:", err)
     } finally {
       setIsSendingVoice(false)
     }
+  }
+
+  const handleReplyToMessage = (message: ReplyToMessage) => {
+    setReplyingTo(message)
+  }
+
+  const handleCancelReply = () => {
+    setReplyingTo(null)
   }
 
   const getUserInfo = (userId: string) => {
@@ -296,21 +345,35 @@ export default function CounselorChatPage() {
 
               {patientInfo && (
                 <div className="flex items-center gap-3">
-                  <UserAvatar avatarId={patientInfo.avatarId} size="sm" />
+                  <div className="relative">
+                    <UserAvatar avatarId={patientInfo.avatarId} size="sm" />
+                    {/* Online indicator dot */}
+                    <div
+                      className={cn(
+                        "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-background",
+                        patientOnline ? "bg-emerald-500" : "bg-gray-400"
+                      )}
+                    />
+                  </div>
                   <div>
                     <h2 className="font-medium text-foreground text-sm">
                       {patientInfo.displayName}
                     </h2>
-                    {conversation && (
-                      <span
-                        className={cn(
-                          "text-xs px-2 py-0.5 rounded-full capitalize",
-                          TOPIC_COLORS[conversation.topic] || TOPIC_COLORS.other
-                        )}
-                      >
-                        {conversation.topic}
+                    <div className="flex items-center gap-2">
+                      {conversation && (
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full capitalize",
+                            TOPIC_COLORS[conversation.topic] || TOPIC_COLORS.other
+                          )}
+                        >
+                          {conversation.topic}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {patientOnline ? "Online" : `Last seen ${patientLastSeen}`}
                       </span>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -382,6 +445,7 @@ export default function CounselorChatPage() {
           currentUserId={counselorInfo?.id || ""}
           getUserInfo={getUserInfo}
           onDeleteMessage={deleteMessage}
+          onReplyMessage={handleReplyToMessage}
         />
         <div ref={messagesEndRef} />
       </div>
@@ -391,6 +455,8 @@ export default function CounselorChatPage() {
         onSendText={handleSendText}
         onSendVoice={handleSendVoice}
         disabled={!counselorInfo || isSendingVoice}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
       />
 
       {/* Session Notes Panel */}

@@ -33,6 +33,22 @@ export interface Message {
   content: string
   duration: number | null
   created_at: string
+  reply_to_id: string | null
+  read_at: string | null
+}
+
+export interface ReplyToMessage {
+  id: string
+  content: string
+  type: MessageType
+  sender_id: string
+}
+
+export interface UserPresence {
+  user_id: string
+  is_online: boolean
+  last_seen: string
+  updated_at: string
 }
 
 export interface Database {

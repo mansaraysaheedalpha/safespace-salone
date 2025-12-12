@@ -1,29 +1,45 @@
 "use client"
 
+import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { UserAvatar } from "@/components/user-avatar"
+import { useUserPresence } from "@/hooks/usePresence"
 import { cn } from "@/lib/utils"
 
 interface ChatHeaderProps {
   counselorName?: string | null
   counselorAvatarId?: string | null
+  counselorId?: string | null
   isConnected: boolean
 }
 
-export function ChatHeader({
+export const ChatHeader = memo(function ChatHeader({
   counselorName,
   counselorAvatarId,
+  counselorId,
   isConnected,
 }: ChatHeaderProps) {
   const router = useRouter()
+  const { isOnline, lastSeenFormatted } = useUserPresence(counselorId ?? null)
+
+  // Determine status text - memoized
+  const statusText = useMemo(() => {
+    if (!isConnected) return "Waiting for counselor..."
+    if (isOnline) return "Online"
+    return `Last seen ${lastSeenFormatted}`
+  }, [isConnected, isOnline, lastSeenFormatted])
+
+  const handleBack = useCallback(() => {
+    router.push("/topics")
+  }, [router])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="flex items-center justify-between px-4 h-16 max-w-md mx-auto">
         {/* Back button */}
         <button
-          onClick={() => router.push("/topics")}
+          onClick={handleBack}
           className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Go back"
         >
@@ -39,11 +55,15 @@ export function ChatHeader({
             <div
               className={cn(
                 "w-2 h-2 rounded-full",
-                isConnected ? "bg-emerald-500" : "bg-amber-500 animate-pulse"
+                !isConnected
+                  ? "bg-amber-500 animate-pulse"
+                  : isOnline
+                    ? "bg-emerald-500"
+                    : "bg-gray-400"
               )}
             />
             <span className="text-xs text-muted-foreground">
-              {isConnected ? "Connected" : "Waiting for counselor..."}
+              {statusText}
             </span>
           </div>
         </div>
@@ -59,4 +79,4 @@ export function ChatHeader({
       </div>
     </header>
   )
-}
+})

@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { cn } from "@/lib/utils"
 import { getAvatarById, getDefaultAvatar } from "@/data/avatars"
 
@@ -24,7 +25,7 @@ const sizeClasses: Record<AvatarSize, { container: string; icon: string }> = {
   },
 }
 
-export function UserAvatar({ avatarId, size = "md", className }: UserAvatarProps) {
+export const UserAvatar = memo(function UserAvatar({ avatarId, size = "md", className }: UserAvatarProps) {
   const avatar = getAvatarById(avatarId) ?? getDefaultAvatar()
   const Icon = avatar.icon
   const sizes = sizeClasses[size]
@@ -43,4 +44,4 @@ export function UserAvatar({ avatarId, size = "md", className }: UserAvatarProps
       <Icon className={cn("text-white", sizes.icon)} strokeWidth={1.5} />
     </div>
   )
-}
+})

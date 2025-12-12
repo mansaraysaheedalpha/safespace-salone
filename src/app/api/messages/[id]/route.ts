@@ -5,6 +5,40 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
+// PATCH - Mark message as read
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    const { read_at } = body
+
+    const supabase = await createClient()
+
+    const { data: message, error } = await supabase
+      .from("messages")
+      .update({ read_at: read_at || new Date().toISOString() })
+      .eq("id", id)
+      .select("id, read_at")
+      .single()
+
+    if (error) {
+      console.error("Error marking message as read:", error)
+      return NextResponse.json(
+        { error: "Failed to update message" },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, message })
+  } catch (error) {
+    console.error("Mark as read error:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params

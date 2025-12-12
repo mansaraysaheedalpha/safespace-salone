@@ -9,8 +9,9 @@ import { MessageListSkeleton } from "@/components/ui/skeleton"
 import { ErrorFallback } from "@/components/error-boundary"
 import { getUserSession } from "@/lib/auth"
 import { useMessages } from "@/hooks/useMessages"
+import { usePresence } from "@/hooks/usePresence"
 import { uploadVoiceNote } from "@/lib/supabase/storage"
-import type { Conversation } from "@/types/database"
+import type { Conversation, ReplyToMessage } from "@/types/database"
 
 interface UserInfo {
   id: string
@@ -25,11 +26,15 @@ export default function ChatPage() {
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [_conversation, setConversation] = useState<Conversation | null>(null)
-  const [counselorInfo, setCounselorInfo] = useState<{ name: string; avatarId: string } | null>(null)
+  const [counselorInfo, setCounselorInfo] = useState<{ id: string; name: string; avatarId: string } | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState("")
   const [isSendingVoice, setIsSendingVoice] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<ReplyToMessage | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Track patient's presence
+  usePresence({ userId: userInfo?.id || "", enabled: !!userInfo })
 
   // Store user info map for message rendering
   const [usersMap, setUsersMap] = useState<Map<string, { avatarId?: string; name?: string }>>(
@@ -57,6 +62,39 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  // Mark received messages as read (for read receipts)
+  useEffect(() => {
+    if (!userInfo || messages.length === 0) return
+
+    // Find unread messages from the counselor (not from patient)
+    const unreadMessages = messages.filter(
+      (msg) =>
+        msg.sender_id !== userInfo.id &&
+        !msg.id.startsWith("temp-") &&
+        !msg.read_at
+    )
+
+    if (unreadMessages.length === 0) return
+
+    // Mark them as read via API
+    const markAsRead = async () => {
+      try {
+        await fetch("/api/messages/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message_ids: unreadMessages.map((m) => m.id),
+            reader_id: userInfo.id,
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to mark messages as read:", err)
+      }
+    }
+
+    markAsRead()
+  }, [messages, userInfo])
 
   // Check session and load conversation data
   useEffect(() => {
@@ -105,6 +143,7 @@ export default function ChatPage() {
         const counselorData = await counselorRes.json()
         if (counselorRes.ok && counselorData.user) {
           setCounselorInfo({
+            id: counselorData.user.id,
             name: counselorData.user.display_name,
             avatarId: counselorData.user.avatar_id,
           })
@@ -126,17 +165,17 @@ export default function ChatPage() {
     }
   }
 
-  const handleSendText = async (content: string) => {
+  const handleSendText = async (content: string, replyToId?: string) => {
     if (!userInfo) return
 
     try {
-      await sendTextMessage(content)
+      await sendTextMessage(content, replyToId)
     } catch (err) {
       console.error("Send text error:", err)
     }
   }
 
-  const handleSendVoice = async (duration: number, audioBlob?: Blob) => {
+  const handleSendVoice = async (duration: number, audioBlob?: Blob, replyToId?: string) => {
     if (!userInfo) return
 
     setIsSendingVoice(true)
@@ -155,12 +194,20 @@ export default function ChatPage() {
         }
       }
 
-      await sendVoiceMessage(duration, audioUrl)
+      await sendVoiceMessage(duration, audioUrl, replyToId)
     } catch (err) {
       console.error("Send voice error:", err)
     } finally {
       setIsSendingVoice(false)
     }
+  }
+
+  const handleReplyToMessage = (message: ReplyToMessage) => {
+    setReplyingTo(message)
+  }
+
+  const handleCancelReply = () => {
+    setReplyingTo(null)
   }
 
   const getUserInfo = (userId: string) => {
@@ -202,6 +249,7 @@ export default function ChatPage() {
       <ChatHeader
         counselorName={counselorInfo?.name}
         counselorAvatarId={counselorInfo?.avatarId}
+        counselorId={counselorInfo?.id}
         isConnected={!!counselorInfo}
       />
 
@@ -212,6 +260,7 @@ export default function ChatPage() {
           currentUserId={userInfo?.id || ""}
           getUserInfo={getUserInfo}
           onDeleteMessage={deleteMessage}
+          onReplyMessage={handleReplyToMessage}
         />
         <div ref={messagesEndRef} />
       </div>
@@ -221,6 +270,8 @@ export default function ChatPage() {
         onSendText={handleSendText}
         onSendVoice={handleSendVoice}
         disabled={!userInfo || isSendingVoice}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
       />
     </div>
   )

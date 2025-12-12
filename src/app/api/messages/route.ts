@@ -31,6 +31,7 @@ interface CreateMessageRequest {
   type: "text" | "voice"
   content?: string
   duration?: number
+  reply_to_id?: string
 }
 
 // Helper to send push notification
@@ -81,7 +82,7 @@ async function sendPushToUser(
 export async function POST(request: NextRequest) {
   try {
     const body: CreateMessageRequest = await request.json()
-    const { conversation_id, sender_id, type, content, duration } = body
+    const { conversation_id, sender_id, type, content, duration, reply_to_id } = body
 
     // Validate input
     if (!conversation_id) {
@@ -148,8 +149,9 @@ export async function POST(request: NextRequest) {
         type,
         content: content || null,
         duration: duration || null,
+        reply_to_id: reply_to_id || null,
       })
-      .select("id, conversation_id, sender_id, type, content, duration, created_at")
+      .select("id, conversation_id, sender_id, type, content, duration, created_at, reply_to_id, read_at")
       .single()
 
     if (error) {
@@ -218,7 +220,7 @@ export async function GET(request: NextRequest) {
 
     const { data: messages, error } = await supabase
       .from("messages")
-      .select("id, conversation_id, sender_id, type, content, duration, created_at")
+      .select("id, conversation_id, sender_id, type, content, duration, created_at, reply_to_id, read_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
 
