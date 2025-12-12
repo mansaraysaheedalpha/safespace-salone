@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { UserAvatar } from "@/components/user-avatar"
 import { SessionNotesPanel } from "@/components/counselor/session-notes-panel"
 import { useMessages } from "@/hooks/useMessages"
+import { useNotifications } from "@/hooks/useNotifications"
 import { uploadVoiceNote } from "@/lib/supabase/storage"
 import { cn } from "@/lib/utils"
 import type { Conversation } from "@/types/database"
@@ -49,11 +50,15 @@ export default function CounselorChatPage() {
   const [isNotesOpen, setIsNotesOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const prevMessagesCountRef = useRef(0)
 
   // Store user info map for message rendering
   const [usersMap, setUsersMap] = useState<Map<string, { avatarId?: string; name?: string }>>(
     new Map()
   )
+
+  // Notifications
+  const { notifyNewMessage, requestPermission } = useNotifications()
 
   // Use the messages hook
   const {
@@ -76,6 +81,35 @@ export default function CounselorChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  // Request notification permission on mount
+  useEffect(() => {
+    requestPermission()
+  }, [requestPermission])
+
+  // Notify when new message from patient arrives
+  useEffect(() => {
+    if (!counselorInfo || messages.length === 0) return
+
+    // Check if there are new messages
+    if (messages.length > prevMessagesCountRef.current) {
+      const newMessages = messages.slice(prevMessagesCountRef.current)
+
+      // Find messages from patient (not from counselor)
+      const patientMessages = newMessages.filter(
+        (msg) => msg.sender_id !== counselorInfo.id && !msg.id.startsWith("temp-")
+      )
+
+      // Notify for each patient message
+      patientMessages.forEach((msg) => {
+        const senderName = patientInfo?.displayName || "Patient"
+        const preview = msg.type === "voice" ? "🎤 Voice message" : msg.content || ""
+        notifyNewMessage(senderName, preview, conversationId)
+      })
+    }
+
+    prevMessagesCountRef.current = messages.length
+  }, [messages, counselorInfo, patientInfo, conversationId, notifyNewMessage])
 
   // Get counselor info from localStorage
   useEffect(() => {

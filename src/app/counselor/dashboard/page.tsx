@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Clock,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { ConversationListSkeleton } from "@/components/ui/skeleton"
+import { useNotifications } from "@/hooks/useNotifications"
 import { cn } from "@/lib/utils"
 
 interface Patient {
@@ -74,6 +75,15 @@ export default function CounselorDashboard() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
   const [counselorInfo, setCounselorInfo] = useState<CounselorInfo | null>(null)
   const [error, setError] = useState("")
+  const prevWaitingIdsRef = useRef<Set<string>>(new Set())
+
+  // Notifications
+  const { notifyNewConversation, requestPermission } = useNotifications()
+
+  // Request notification permission
+  useEffect(() => {
+    requestPermission()
+  }, [requestPermission])
 
   // Get counselor info from localStorage
   useEffect(() => {
@@ -125,6 +135,23 @@ export default function CounselorDashboard() {
       return () => clearInterval(pollInterval)
     }
   }, [counselorInfo, fetchConversations])
+
+  // Notify for new waiting conversations
+  useEffect(() => {
+    const waitingConversations = conversations.filter((c) => !c.counselor_id)
+    const currentWaitingIds = new Set(waitingConversations.map((c) => c.id))
+
+    // Find new conversations (in current but not in previous)
+    waitingConversations.forEach((conv) => {
+      if (!prevWaitingIdsRef.current.has(conv.id)) {
+        // New waiting conversation
+        const patientName = conv.patient?.display_name || "A patient"
+        notifyNewConversation(patientName, conv.topic, conv.urgency)
+      }
+    })
+
+    prevWaitingIdsRef.current = currentWaitingIds
+  }, [conversations, notifyNewConversation])
 
   // Accept conversation
   const handleAccept = async (conversationId: string) => {
