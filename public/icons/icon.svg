@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#0f172a"/>
+
+  <!-- Inner circle with gradient -->
+  <circle cx="256" cy="256" r="200" fill="#1e293b"/>
+
+  <!-- Shield icon -->
+  <path
+    d="M256 100c-60 0-120 30-120 30v120c0 80 60 140 120 162 60-22 120-82 120-162V130s-60-30-120-30z"
+    fill="#14b8a6"
+    opacity="0.9"
+  />
+
+  <!-- Checkmark -->
+  <path
+    d="M220 260l30 30 60-60"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- Heart accent -->
+  <path
+    d="M256 340c-20-15-60-50-60-80 0-20 15-35 35-35 15 0 25 10 25 10s10-10 25-10c20 0 35 15 35 35 0 30-40 65-60 80z"
+    fill="#f472b6"
+    opacity="0.8"
+  />
+</svg>

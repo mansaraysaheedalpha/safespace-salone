@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* SafeSpace Salone - Calming Dark Theme for Mental Health */
+:root {
+  --radius: 0.75rem;
+
+  /* Deep blue-gray background */
+  --background: hsl(222 20% 10%);
+  --foreground: hsl(210 20% 90%);
+
+  /* Card - slightly lighter than background */
+  --card: hsl(222 20% 14%);
+  --card-foreground: hsl(210 20% 90%);
+
+  /* Popover */
+  --popover: hsl(222 20% 14%);
+  --popover-foreground: hsl(210 20% 90%);
+
+  /* Primary - calming teal/cyan */
+  --primary: hsl(180 50% 45%);
+  --primary-foreground: hsl(222 20% 10%);
+
+  /* Secondary - soft purple */
+  --secondary: hsl(260 30% 25%);
+  --secondary-foreground: hsl(210 20% 90%);
+
+  /* Muted - darker shade for subtle elements */
+  --muted: hsl(222 20% 18%);
+  --muted-foreground: hsl(210 15% 60%);
+
+  /* Accent - warm amber for hope */
+  --accent: hsl(40 90% 55%);
+  --accent-foreground: hsl(222 20% 10%);
+
+  /* Destructive - soft red */
+  --destructive: hsl(0 60% 50%);
+
+  /* Border and input */
+  --border: hsl(222 20% 20%);
+  --input: hsl(222 20% 18%);
+  --ring: hsl(180 50% 45%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(222 20% 14%);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(222 20% 30%);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(180 50% 45%);
+  }
+}
+
+/* Focus styles for accessibility */
+@layer base {
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+/* Safe area insets for PWA */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

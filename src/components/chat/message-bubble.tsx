@@ -1,0 +1,235 @@
+"use client"
+
+import { useState, useMemo } from "react"
+import { Play, Pause, Clock, AlertCircle, Check } from "lucide-react"
+import { UserAvatar } from "@/components/user-avatar"
+import { cn } from "@/lib/utils"
+import type { Message } from "@/types/database"
+
+type MessageStatus = "sending" | "sent" | "error" | undefined
+
+interface ExtendedMessage extends Message {
+  status?: MessageStatus
+}
+
+interface MessageBubbleProps {
+  message: ExtendedMessage
+  isOwn: boolean
+  senderAvatarId?: string
+  senderName?: string
+  showAvatar?: boolean
+}
+
+export function MessageBubble({
+  message,
+  isOwn,
+  senderAvatarId,
+  senderName,
+  showAvatar = true,
+}: MessageBubbleProps) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [playbackProgress, setPlaybackProgress] = useState(0)
+  const status = (message as ExtendedMessage).status
+
+  // Generate consistent waveform bars (memoized to prevent re-renders)
+  const waveformBars = useMemo(() => {
+    const seed = message.id.charCodeAt(0) + (message.duration || 5)
+    return Array.from({ length: 24 }).map((_, i) => {
+      const pseudoRandom = Math.sin(seed * (i + 1) * 0.5) * 0.5 + 0.5
+      return Math.floor(pseudoRandom * 60 + 30)
+    })
+  }, [message.id, message.duration])
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
+  }
+
+  const handlePlayVoice = () => {
+    if (isPlaying) {
+      setIsPlaying(false)
+      setPlaybackProgress(0)
+      return
+    }
+
+    setIsPlaying(true)
+    const duration = (message.duration || 5) * 1000
+    const startTime = Date.now()
+
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      setPlaybackProgress(progress)
+
+      if (progress < 1) {
+        requestAnimationFrame(updateProgress)
+      } else {
+        setIsPlaying(false)
+        setPlaybackProgress(0)
+      }
+    }
+
+    requestAnimationFrame(updateProgress)
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex gap-2.5 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
+        isOwn ? "ml-auto flex-row-reverse" : "mr-auto"
+      )}
+    >
+      {/* Avatar - only shown for other's messages */}
+      {!isOwn && (
+        <div className="flex-shrink-0 mt-auto mb-5">
+          {showAvatar && senderAvatarId ? (
+            <UserAvatar avatarId={senderAvatarId} size="sm" />
+          ) : (
+            <div className="w-8 h-8" /> // Spacer for alignment
+          )}
+        </div>
+      )}
+
+      {/* Message content */}
+      <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
+        {/* Sender name for counselor messages */}
+        {!isOwn && senderName && showAvatar && (
+          <span className="text-xs text-muted-foreground mb-1.5 ml-1 font-medium">
+            {senderName}
+          </span>
+        )}
+
+        {/* Bubble */}
+        <div
+          className={cn(
+            "relative px-4 py-3 shadow-sm",
+            // Rounded corners with tail
+            isOwn
+              ? "rounded-2xl rounded-br-md bg-primary text-primary-foreground shadow-primary/10"
+              : "rounded-2xl rounded-bl-md bg-muted text-foreground shadow-black/5"
+          )}
+        >
+          {message.type === "text" ? (
+            // Text message
+            <div className="relative">
+              <p className="text-sm whitespace-pre-wrap wrap-break-word leading-relaxed">
+                {message.content}
+              </p>
+              {/* Inline timestamp and status for text */}
+              <span
+                className={cn(
+                  "text-[10px] float-right ml-3 mt-1 inline-flex items-center gap-1",
+                  isOwn ? "text-primary-foreground/60" : "text-muted-foreground"
+                )}
+              >
+                {formatTime(message.created_at)}
+                {isOwn && status === "sending" && (
+                  <Clock className="w-3 h-3 animate-pulse" />
+                )}
+                {isOwn && status === "error" && (
+                  <AlertCircle className="w-3 h-3 text-destructive" />
+                )}
+                {isOwn && (status === "sent" || !status) && !message.id.startsWith("temp-") && (
+                  <Check className="w-3 h-3" />
+                )}
+              </span>
+            </div>
+          ) : (
+            // Voice message
+            <button
+              onClick={handlePlayVoice}
+              className="flex items-center gap-3 min-w-40"
+              aria-label={isPlaying ? "Pause voice message" : "Play voice message"}
+            >
+              {/* Play/Pause button */}
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                  isOwn
+                    ? "bg-primary-foreground/20 hover:bg-primary-foreground/30"
+                    : "bg-primary/15 hover:bg-primary/25"
+                )}
+              >
+                {isPlaying ? (
+                  <Pause
+                    className={cn(
+                      "w-5 h-5",
+                      isOwn ? "text-primary-foreground" : "text-primary"
+                    )}
+                    fill="currentColor"
+                  />
+                ) : (
+                  <Play
+                    className={cn(
+                      "w-5 h-5 ml-0.5",
+                      isOwn ? "text-primary-foreground" : "text-primary"
+                    )}
+                    fill="currentColor"
+                  />
+                )}
+              </div>
+
+              {/* Waveform visualization */}
+              <div className="flex-1 flex items-center gap-0.5 h-8">
+                {waveformBars.map((height, i) => {
+                  const isActive = isPlaying && i / waveformBars.length <= playbackProgress
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "w-0.75 rounded-full transition-all duration-150",
+                        isOwn
+                          ? isActive
+                            ? "bg-primary-foreground"
+                            : "bg-primary-foreground/40"
+                          : isActive
+                            ? "bg-primary"
+                            : "bg-foreground/25"
+                      )}
+                      style={{ height: `${height}%` }}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* Duration and status */}
+              <div className="flex flex-col items-end gap-0.5 shrink-0">
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    isOwn ? "text-primary-foreground/80" : "text-foreground/70"
+                  )}
+                >
+                  {formatDuration(message.duration || 0)}
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] inline-flex items-center gap-1",
+                    isOwn ? "text-primary-foreground/50" : "text-muted-foreground"
+                  )}
+                >
+                  {formatTime(message.created_at)}
+                  {isOwn && status === "sending" && (
+                    <Clock className="w-2.5 h-2.5 animate-pulse" />
+                  )}
+                  {isOwn && status === "error" && (
+                    <AlertCircle className="w-2.5 h-2.5 text-destructive" />
+                  )}
+                  {isOwn && (status === "sent" || !status) && !message.id.startsWith("temp-") && (
+                    <Check className="w-2.5 h-2.5" />
+                  )}
+                </span>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
