@@ -4,7 +4,6 @@
 
 1. Make sure the database is set up:
    - Run `database/schema.sql` in Supabase SQL Editor
-   - Run `database/seed.sql` to add test counselors
 
 2. Start the app:
    ```bash
@@ -57,15 +56,18 @@
 
 ## Testing as a Counselor (I'm a Counselor)
 
-### Step 1: Counselor Login
+### Step 1: Create Counselor Account
 - Open a NEW incognito window
 - Go to `http://localhost:3000`
 - Click **"I'm a Counselor"**
 - You're now on `/counselor/login`
-- Enter:
-  - Display Name: `Dr. Hope`
-  - PIN: `1234`
-- Click **"Sign In"**
+- Click **"Register as Counselor"** link at the bottom
+- You're now on `/counselor/signup`
+- Pick any avatar (click one)
+- Enter a display name like "Dr. Hope"
+- Enter a 4-digit PIN (e.g., 1234)
+- Confirm the same PIN
+- Click **"Create Account"**
 
 ### Step 2: Dashboard
 - You're now on `/counselor/dashboard`
@@ -141,7 +143,8 @@ With both windows open (patient and counselor):
 - [ ] Patient can select topic and urgency
 - [ ] Patient can send text messages
 - [ ] Patient can send voice messages
-- [ ] Counselor can log in (Dr. Hope / 1234)
+- [ ] Counselor can sign up with avatar and PIN
+- [ ] Counselor can log in after signing up
 - [ ] Counselor sees waiting conversations
 - [ ] Counselor can accept and chat
 - [ ] Counselor can save session notes
@@ -149,13 +152,3 @@ With both windows open (patient and counselor):
 - [ ] Offline banner appears when disconnected
 - [ ] 404 page shows for invalid URLs
 - [ ] Mobile view looks good at 375px width
-
----
-
-## Test Accounts
-
-| Role | Name | PIN |
-|------|------|-----|
-| Counselor | Dr. Hope | 1234 |
-| Counselor | Dr. Grace | 5678 |
-| Patient | Create your own | Any 4 digits |

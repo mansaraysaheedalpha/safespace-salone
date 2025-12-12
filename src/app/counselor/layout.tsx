@@ -25,8 +25,8 @@ export default function CounselorLayout({
   // Check for counselor session
   useEffect(() => {
     const checkSession = () => {
-      // Skip auth check on login page
-      if (pathname === "/counselor/login") {
+      // Skip auth check on login and signup pages
+      if (pathname === "/counselor/login" || pathname === "/counselor/signup") {
         setIsLoading(false)
         return
       }
@@ -63,7 +63,9 @@ export default function CounselorLayout({
   }
 
   // Show loading state while checking session
-  if (isLoading && pathname !== "/counselor/login") {
+  const isAuthPage = pathname === "/counselor/login" || pathname === "/counselor/signup"
+
+  if (isLoading && !isAuthPage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -71,8 +73,8 @@ export default function CounselorLayout({
     )
   }
 
-  // Login page doesn't need the header
-  if (pathname === "/counselor/login") {
+  // Login and signup pages don't need the header
+  if (isAuthPage) {
     return <>{children}</>
   }
 

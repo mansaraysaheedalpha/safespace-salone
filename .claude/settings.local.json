@@ -10,7 +10,9 @@
       "Bash(node scripts/generate-icons.js:*)",
       "Bash(npm run lint)",
       "Bash(npm cache clean:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

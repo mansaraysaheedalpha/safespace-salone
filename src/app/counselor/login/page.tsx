@@ -15,6 +15,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ShieldCheck, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -164,16 +165,17 @@ export default function CounselorLoginPage() {
             </Button>
           </form>
 
-          {/* Demo note */}
-          <div className="text-center text-xs text-muted-foreground bg-muted/50 px-4 py-3 rounded-lg">
+          {/* Signup link */}
+          <div className="text-center text-sm text-muted-foreground">
             <p>
-              <strong>Demo:</strong> Create a test counselor via SQL:
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/counselor/signup"
+                className="text-primary hover:underline font-medium"
+              >
+                Register as Counselor
+              </Link>
             </p>
-            <code className="block mt-2 text-[10px] bg-background px-2 py-1 rounded">
-              INSERT INTO users (display_name, avatar_id, pin_hash, role)
-              <br />
-              VALUES (&apos;Dr. Sarah&apos;, &apos;calm-ocean&apos;, &apos;[hash]&apos;, &apos;counselor&apos;);
-            </code>
           </div>
         </div>
       </main>
