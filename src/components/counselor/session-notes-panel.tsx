@@ -33,7 +33,7 @@ export function SessionNotesPanel({
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
-  // Load notes from localStorage
+  // Load notes from localStorage when panel opens
   useEffect(() => {
     if (isOpen && conversationId) {
       const storageKey = `safespace_notes_${conversationId}`
@@ -41,14 +41,19 @@ export function SessionNotesPanel({
       if (savedNotes) {
         try {
           const parsed = JSON.parse(savedNotes)
-          setNotes(parsed.content || "")
-          setLastSaved(parsed.updatedAt ? new Date(parsed.updatedAt) : null)
+          // Using requestAnimationFrame to batch state updates
+          requestAnimationFrame(() => {
+            setNotes(parsed.content || "")
+            setLastSaved(parsed.updatedAt ? new Date(parsed.updatedAt) : null)
+          })
         } catch {
-          setNotes(savedNotes)
+          requestAnimationFrame(() => setNotes(savedNotes))
         }
       } else {
-        setNotes("")
-        setLastSaved(null)
+        requestAnimationFrame(() => {
+          setNotes("")
+          setLastSaved(null)
+        })
       }
     }
   }, [isOpen, conversationId])

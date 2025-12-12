@@ -14,28 +14,32 @@ interface QueuedMessage {
 
 const STORAGE_KEY = "safespace_offline_queue"
 
+// Helper to load queue from localStorage
+const loadQueueFromStorage = (conversationId: string): QueuedMessage[] => {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    try {
+      const allQueued = JSON.parse(stored) as QueuedMessage[]
+      return allQueued.filter((m) => m.conversationId === conversationId)
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }
+  return []
+}
+
+// Helper to get initial online status (SSR-safe)
+const getOnlineStatus = () => {
+  if (typeof window === "undefined") return true
+  return navigator.onLine
+}
+
 export function useOfflineQueue(conversationId: string, senderId: string) {
-  const [queue, setQueue] = useState<QueuedMessage[]>([])
-  const [isOnline, setIsOnline] = useState(true)
+  const [queue, setQueue] = useState<QueuedMessage[]>(() => loadQueueFromStorage(conversationId))
+  const [isOnline, setIsOnline] = useState(getOnlineStatus)
   const [isProcessing, setIsProcessing] = useState(false)
   const processingRef = useRef(false)
-
-  // Load queue from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const allQueued = JSON.parse(stored) as QueuedMessage[]
-        // Filter for this conversation
-        setQueue(allQueued.filter((m) => m.conversationId === conversationId))
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
-
-    // Set initial online state
-    setIsOnline(navigator.onLine)
-  }, [conversationId])
 
   // Listen for online/offline events
   useEffect(() => {

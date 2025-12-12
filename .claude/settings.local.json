@@ -7,7 +7,10 @@
       "Bash(npx shadcn@latest add button card input label avatar badge scroll-area separator -y)",
       "Bash(npx tsc:*)",
       "Bash(git pull:*)",
-      "Bash(node scripts/generate-icons.js:*)"
+      "Bash(node scripts/generate-icons.js:*)",
+      "Bash(npm run lint)",
+      "Bash(npm cache clean:*)",
+      "Bash(git add:*)"
     ]
   }
 }

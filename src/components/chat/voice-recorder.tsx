@@ -15,6 +15,11 @@ interface VoiceRecorderProps {
 const MAX_DURATION = 60 // seconds
 const WARNING_DURATION = 50 // seconds
 
+// Pre-generated random heights for waveform animation (stable across renders)
+const WAVEFORM_HEIGHTS = Array.from({ length: 32 }, (_, i) =>
+  Math.sin(i * 0.3) * 40 + 50 + (i % 3) * 10
+)
+
 export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderProps) {
   const [state, setState] = useState<RecordingState>("idle")
   const [duration, setDuration] = useState(0)
@@ -171,9 +176,12 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
 
   // Auto-start recording when component mounts
   useEffect(() => {
-    if (state === "idle") {
+    // Use requestAnimationFrame to defer the state change
+    const frameId = requestAnimationFrame(() => {
       startRecording()
-    }
+    })
+    return () => cancelAnimationFrame(frameId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -224,12 +232,12 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
 
             {/* Animated waveform bars */}
             <div className="flex-1 flex items-center justify-center gap-0.5 h-6">
-              {Array.from({ length: 32 }).map((_, i) => (
+              {WAVEFORM_HEIGHTS.map((height, i) => (
                 <div
                   key={i}
                   className="w-0.75 bg-primary rounded-full animate-pulse"
                   style={{
-                    height: `${Math.random() * 80 + 20}%`,
+                    height: `${height}%`,
                     animationDelay: `${i * 30}ms`,
                     animationDuration: "500ms",
                   }}

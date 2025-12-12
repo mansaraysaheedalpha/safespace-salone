@@ -24,7 +24,7 @@ export default function ChatPage() {
   const conversationId = params.id as string
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [conversation, setConversation] = useState<Conversation | null>(null)
+  const [_conversation, setConversation] = useState<Conversation | null>(null)
   const [counselorInfo, setCounselorInfo] = useState<{ name: string; avatarId: string } | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState("")

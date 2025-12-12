@@ -4,17 +4,17 @@ import { useState, useEffect } from "react"
 import { WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+// Helper to safely check navigator.onLine (SSR-safe)
+const getInitialOnlineStatus = () => {
+  if (typeof window === "undefined") return true
+  return navigator.onLine
+}
+
 export function OfflineIndicator() {
-  const [isOffline, setIsOffline] = useState(false)
-  const [show, setShow] = useState(false)
+  const [isOffline, setIsOffline] = useState(() => !getInitialOnlineStatus())
+  const [show, setShow] = useState(() => !getInitialOnlineStatus())
 
   useEffect(() => {
-    // Initial state
-    setIsOffline(!navigator.onLine)
-    if (!navigator.onLine) {
-      setShow(true)
-    }
-
     const handleOnline = () => {
       setIsOffline(false)
       // Keep showing for a moment to indicate reconnection
