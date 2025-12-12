@@ -6,27 +6,20 @@ import { verifyPin } from "@/lib/auth"
  * Patient Login API
  *
  * NOTE: This is a simplified authentication flow for hackathon/demo purposes.
+ * PIN-only login - patients just enter their 4-digit PIN.
  * In production, this would use proper authentication.
  */
 
 interface LoginRequest {
-  display_name: string
   pin: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: LoginRequest = await request.json()
-    const { display_name, pin } = body
+    const { pin } = body
 
     // Validate input
-    if (!display_name || !display_name.trim()) {
-      return NextResponse.json(
-        { error: "Display name is required" },
-        { status: 400 }
-      )
-    }
-
     if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: "PIN must be 4 digits" },
@@ -36,25 +29,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Find patient by display name
-    const { data: user, error } = await supabase
+    // Find all patients
+    const { data: patients, error } = await supabase
       .from("users")
       .select("id, display_name, avatar_id, pin_hash, role")
-      .eq("display_name", display_name.trim())
       .eq("role", "patient")
-      .single()
 
-    if (error || !user) {
+    if (error || !patients || patients.length === 0) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Invalid PIN" },
         { status: 401 }
       )
     }
 
-    // Verify PIN
-    if (!verifyPin(pin, user.pin_hash)) {
+    // Find patient with matching PIN
+    const user = patients.find((p) => verifyPin(pin, p.pin_hash))
+
+    if (!user) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Invalid PIN" },
         { status: 401 }
       )
     }

@@ -1,29 +1,49 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+/**
+ * Patient Login Page
+ *
+ * PIN-only login for quick access.
+ * Handles redirect parameter for notification click navigation.
+ */
+
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Heart, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function PatientLoginPage() {
+function PatientLoginForm() {
   const router = useRouter()
-  const [displayName, setDisplayName] = useState("")
+  const searchParams = useSearchParams()
   const [pin, setPin] = useState("")
   const [showPin, setShowPin] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
+
+  // Get redirect URL from query params
+  useEffect(() => {
+    const redirect = searchParams.get("redirect")
+    if (redirect) {
+      setRedirectUrl(decodeURIComponent(redirect))
+    }
+  }, [searchParams])
+
+  // Check if already logged in
+  useEffect(() => {
+    const session = localStorage.getItem("safespace_user_id")
+    if (session && redirectUrl) {
+      // Already logged in and has redirect, go there
+      router.push(redirectUrl)
+    }
+  }, [router, redirectUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-
-    if (!displayName.trim()) {
-      setError("Please enter your display name")
-      return
-    }
 
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       setError("PIN must be 4 digits")
@@ -36,10 +56,7 @@ export default function PatientLoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName.trim(),
-          pin,
-        }),
+        body: JSON.stringify({ pin }),
       })
 
       const data = await response.json()
@@ -51,7 +68,7 @@ export default function PatientLoginPage() {
       // Save patient session
       localStorage.setItem("safespace_user_id", data.user.id)
       localStorage.setItem(
-        "safespace_user",
+        "safespace_user_info",
         JSON.stringify({
           id: data.user.id,
           displayName: data.user.display_name,
@@ -59,8 +76,10 @@ export default function PatientLoginPage() {
         })
       )
 
-      // Redirect based on whether they have an active conversation
-      if (data.activeConversation) {
+      // Redirect priority: redirect param > active conversation > topics
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else if (data.activeConversation) {
         router.push(`/chat/${data.activeConversation.id}`)
       } else {
         router.push("/topics")
@@ -96,26 +115,12 @@ export default function PatientLoginPage() {
               Welcome Back
             </h1>
             <p className="text-muted-foreground text-sm">
-              Sign in to continue your journey
+              Enter your PIN to continue
             </p>
           </div>
 
           {/* Login form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Display name */}
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your display name"
-                disabled={isLoading}
-                className="h-12"
-              />
-            </div>
-
             {/* PIN */}
             <div className="space-y-2">
               <Label htmlFor="pin">PIN</Label>
@@ -126,10 +131,11 @@ export default function PatientLoginPage() {
                   inputMode="numeric"
                   value={pin}
                   onChange={handlePinChange}
-                  placeholder="4-digit PIN"
+                  placeholder="Enter 4-digit PIN"
                   maxLength={4}
                   disabled={isLoading}
-                  className="h-12 text-center text-xl tracking-[0.5em] font-mono pr-10"
+                  autoFocus
+                  className="h-14 text-center text-2xl tracking-[0.5em] font-mono pr-12"
                 />
                 <button
                   type="button"
@@ -152,7 +158,7 @@ export default function PatientLoginPage() {
             {/* Submit button */}
             <Button
               type="submit"
-              disabled={isLoading || !displayName.trim() || pin.length !== 4}
+              disabled={isLoading || pin.length !== 4}
               className="w-full h-12 text-base"
             >
               {isLoading ? (
@@ -191,5 +197,17 @@ export default function PatientLoginPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function PatientLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <PatientLoginForm />
+    </Suspense>
   )
 }

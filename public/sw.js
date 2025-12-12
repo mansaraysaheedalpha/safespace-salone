@@ -59,7 +59,16 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/counselor/dashboard';
+  // Get the target URL from notification data
+  const targetUrl = event.notification.data?.url || '/counselor/dashboard';
+  const userType = event.notification.data?.userType || 'counselor';
+
+  // Determine login page based on user type
+  const loginPage = userType === 'patient' ? '/login' : '/counselor/login';
+
+  // Encode the redirect URL to pass as parameter
+  const redirectParam = encodeURIComponent(targetUrl);
+  const urlToOpen = `${loginPage}?redirect=${redirectParam}`;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })

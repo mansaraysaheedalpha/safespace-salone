@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { user_id, title, message, url, tag } = body
+    const { user_id, title, message, url, tag, userType } = body
 
     if (!user_id || !message) {
       return NextResponse.json(
@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
       icon: "/icons/icon-192x192.png",
       badge: "/icons/icon-72x72.png",
       tag: tag || "message",
-      data: { url: url || "/counselor/dashboard" },
+      data: {
+        url: url || "/counselor/dashboard",
+        userType: userType || "counselor"
+      },
     })
 
     // Send to all subscriptions
