@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { useUserPresence } from "@/hooks/usePresence"
 import { cn } from "@/lib/utils"
@@ -38,13 +39,15 @@ export const ChatHeader = memo(function ChatHeader({
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="flex items-center justify-between px-4 h-16 max-w-md mx-auto">
         {/* Back button */}
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleBack}
-          className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Go back"
+          aria-label="Go back to topics"
         >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1">Topics</span>
+        </Button>
 
         {/* Center - Title and status */}
         <div className="flex flex-col items-center">

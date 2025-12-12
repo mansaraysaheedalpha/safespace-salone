@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, FileText, MoreVertical, X } from "lucide-react"
+import { ArrowLeft, FileText, MoreVertical, X, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MessageList } from "@/components/chat/message-list"
 import { ChatInput } from "@/components/chat/chat-input"
@@ -334,13 +334,15 @@ export default function CounselorChatPage() {
           <div className="flex items-center justify-between">
             {/* Left side - back and patient info */}
             <div className="flex items-center gap-3">
+              {/* Back button - icon on mobile, full button on desktop */}
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
+                size="sm"
                 onClick={() => router.push("/counselor/dashboard")}
                 className="shrink-0"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1">Dashboard</span>
               </Button>
 
               {patientInfo && (
