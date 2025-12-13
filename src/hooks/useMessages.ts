@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
+import {
+  saveMessages,
+  getMessages as getOfflineMessages,
+  addPendingMessage,
+} from "@/lib/offline/db"
 import type { Message } from "@/types/database"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
@@ -11,15 +16,33 @@ interface UseMessagesOptions {
 }
 
 interface SendingMessage extends Message {
-  status: "sending" | "sent" | "error"
+  status: "sending" | "sent" | "error" | "pending"
 }
 
 export function useMessages({ conversationId, userId }: UseMessagesOptions) {
   const [messages, setMessages] = useState<(Message | SendingMessage)[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const supabaseRef = useRef(createClient())
+
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+
+    if (typeof window !== "undefined") {
+      setIsOffline(!navigator.onLine)
+      window.addEventListener("online", handleOnline)
+      window.addEventListener("offline", handleOffline)
+    }
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
 
   // Fetch initial messages
   const fetchMessages = useCallback(async () => {
@@ -31,10 +54,32 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         throw new Error(data.error || "Failed to fetch messages")
       }
 
-      setMessages(data.messages || [])
+      const fetchedMessages = data.messages || []
+      setMessages(fetchedMessages)
       setError(null)
+
+      // Save messages to IndexedDB for offline access
+      try {
+        await saveMessages(fetchedMessages)
+      } catch (offlineErr) {
+        console.log("Could not save to offline storage:", offlineErr)
+      }
     } catch (err) {
       console.error("Fetch messages error:", err)
+
+      // Try to load from offline storage
+      try {
+        const offlineMessages = await getOfflineMessages(conversationId)
+        if (offlineMessages.length > 0) {
+          setMessages(offlineMessages)
+          setError(null)
+          console.log("Loaded messages from offline storage")
+          return
+        }
+      } catch (offlineErr) {
+        console.log("Could not load from offline storage:", offlineErr)
+      }
+
       setError(err instanceof Error ? err.message : "Failed to load messages")
     } finally {
       setIsLoading(false)
@@ -89,6 +134,9 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
 
             return [...prev, newMessage]
           })
+
+          // Save to offline storage
+          saveMessages([newMessage]).catch(() => {})
         }
       )
       .on(
@@ -126,6 +174,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
   const sendTextMessage = useCallback(
     async (content: string, replyToId?: string) => {
       const tempId = `temp-${Date.now()}`
+      const now = new Date().toISOString()
       const tempMessage: SendingMessage = {
         id: tempId,
         conversation_id: conversationId,
@@ -133,14 +182,35 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         type: "text",
         content,
         duration: null,
-        created_at: new Date().toISOString(),
-        status: "sending",
+        created_at: now,
+        status: isOffline ? "pending" : "sending",
         reply_to_id: replyToId || null,
         read_at: null,
       }
 
       // Optimistic update
       setMessages((prev) => [...prev, tempMessage])
+
+      // If offline, queue for later sync
+      if (isOffline) {
+        try {
+          await addPendingMessage({
+            id: tempId,
+            conversation_id: conversationId,
+            sender_id: userId,
+            type: "text",
+            content,
+            reply_to_id: replyToId,
+            created_at: now,
+            retryCount: 0,
+          })
+          console.log("Message queued for offline sync")
+          return tempMessage
+        } catch (err) {
+          console.error("Failed to queue message:", err)
+          throw err
+        }
+      }
 
       try {
         const response = await fetch("/api/messages", {
@@ -168,6 +238,31 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
 
         return data.message
       } catch (err) {
+        // If network error, queue for later
+        if (err instanceof TypeError && err.message.includes("fetch")) {
+          try {
+            await addPendingMessage({
+              id: tempId,
+              conversation_id: conversationId,
+              sender_id: userId,
+              type: "text",
+              content,
+              reply_to_id: replyToId,
+              created_at: now,
+              retryCount: 0,
+            })
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === tempId ? { ...m, status: "pending" } as SendingMessage : m
+              )
+            )
+            console.log("Message queued after network error")
+            return tempMessage
+          } catch (queueErr) {
+            console.error("Failed to queue message:", queueErr)
+          }
+        }
+
         // Mark message as error
         setMessages((prev) =>
           prev.map((m) =>
@@ -178,13 +273,14 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         throw err
       }
     },
-    [conversationId, userId]
+    [conversationId, userId, isOffline]
   )
 
   // Send voice message with optimistic update
   const sendVoiceMessage = useCallback(
     async (duration: number, audioUrl?: string, replyToId?: string) => {
       const tempId = `temp-${Date.now()}`
+      const now = new Date().toISOString()
       const tempMessage: SendingMessage = {
         id: tempId,
         conversation_id: conversationId,
@@ -192,14 +288,36 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         type: "voice",
         content: audioUrl || "[Voice message]",
         duration,
-        created_at: new Date().toISOString(),
-        status: "sending",
+        created_at: now,
+        status: isOffline ? "pending" : "sending",
         reply_to_id: replyToId || null,
         read_at: null,
       }
 
       // Optimistic update
       setMessages((prev) => [...prev, tempMessage])
+
+      // If offline, queue for later sync
+      if (isOffline) {
+        try {
+          await addPendingMessage({
+            id: tempId,
+            conversation_id: conversationId,
+            sender_id: userId,
+            type: "voice",
+            content: audioUrl || "[Voice message]",
+            duration,
+            reply_to_id: replyToId,
+            created_at: now,
+            retryCount: 0,
+          })
+          console.log("Voice message queued for offline sync")
+          return tempMessage
+        } catch (err) {
+          console.error("Failed to queue voice message:", err)
+          throw err
+        }
+      }
 
       try {
         const response = await fetch("/api/messages", {
@@ -228,6 +346,31 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
 
         return data.message
       } catch (err) {
+        // If network error, queue for later
+        if (err instanceof TypeError && err.message.includes("fetch")) {
+          try {
+            await addPendingMessage({
+              id: tempId,
+              conversation_id: conversationId,
+              sender_id: userId,
+              type: "voice",
+              content: audioUrl || "[Voice message]",
+              duration,
+              reply_to_id: replyToId,
+              created_at: now,
+              retryCount: 0,
+            })
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === tempId ? { ...m, status: "pending" } as SendingMessage : m
+              )
+            )
+            return tempMessage
+          } catch (queueErr) {
+            console.error("Failed to queue voice message:", queueErr)
+          }
+        }
+
         // Mark message as error
         setMessages((prev) =>
           prev.map((m) =>
@@ -238,22 +381,22 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
         throw err
       }
     },
-    [conversationId, userId]
+    [conversationId, userId, isOffline]
   )
 
   // Retry failed message
   const retryMessage = useCallback(
     async (messageId: string) => {
       const message = messages.find((m) => m.id === messageId) as SendingMessage
-      if (!message || message.status !== "error") return
+      if (!message || (message.status !== "error" && message.status !== "pending")) return
 
       // Remove failed message and resend
       setMessages((prev) => prev.filter((m) => m.id !== messageId))
 
       if (message.type === "text") {
-        await sendTextMessage(message.content)
+        await sendTextMessage(message.content, message.reply_to_id || undefined)
       } else {
-        await sendVoiceMessage(message.duration || 0, message.content)
+        await sendVoiceMessage(message.duration || 0, message.content, message.reply_to_id || undefined)
       }
     },
     [messages, sendTextMessage, sendVoiceMessage]
@@ -273,6 +416,7 @@ export function useMessages({ conversationId, userId }: UseMessagesOptions) {
     messages,
     isLoading,
     error,
+    isOffline,
     sendTextMessage,
     sendVoiceMessage,
     retryMessage,
