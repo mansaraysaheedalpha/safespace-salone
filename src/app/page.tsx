@@ -36,28 +36,46 @@ export default function LandingPage() {
             <span className="text-foreground/80">Anonymous. Private. Always here.</span>
           </p>
 
-          {/* Primary CTA */}
-          <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-            <Button
-              asChild
-              size="lg"
-              className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-            >
-              <Link href="/signup">
-                Get Support
+          {/* Two Main CTAs */}
+          <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            {/* Get Support - for patients */}
+            <div className="space-y-2">
+              <Button
+                asChild
+                size="lg"
+                className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              >
+                <Link href="/login">
+                  Get Support
+                </Link>
+              </Button>
+              <Link
+                href="/signup"
+                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                New here? Register
               </Link>
-            </Button>
+            </div>
 
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="w-full h-12 text-base rounded-xl"
-            >
-              <Link href="/login">
-                I already have an account
+            {/* I'm a Counselor */}
+            <div className="space-y-2">
+              <Button
+                asChild
+                size="lg"
+                variant="secondary"
+                className="w-full h-14 text-base font-semibold rounded-xl bg-secondary hover:bg-secondary/80 transition-all"
+              >
+                <Link href="/counselor/login">
+                  I&apos;m a Counselor
+                </Link>
+              </Button>
+              <Link
+                href="/counselor/signup"
+                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Register as a Counselor
               </Link>
-            </Button>
+            </div>
           </div>
 
           {/* Features */}
@@ -86,13 +104,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="px-6 py-6 text-center animate-in fade-in duration-700 delay-700">
-        <Link
-          href="/counselor/login"
-          className="text-sm text-muted-foreground hover:text-primary transition-colors"
-        >
-          I&apos;m a Counselor
-        </Link>
-        <p className="text-xs text-muted-foreground/60 mt-4">
+        <p className="text-xs text-muted-foreground/60">
           Your identity stays hidden. Your feelings matter.
         </p>
       </footer>
