@@ -37,45 +37,27 @@ export default function LandingPage() {
           </p>
 
           {/* Two Main CTAs */}
-          <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-            {/* Get Support - for patients */}
-            <div className="space-y-2">
-              <Button
-                asChild
-                size="lg"
-                className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-              >
-                <Link href="/login">
-                  Get Support
-                </Link>
-              </Button>
-              <Link
-                href="/signup"
-                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                New here? Register
+          <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            <Button
+              asChild
+              size="lg"
+              className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+            >
+              <Link href="/login">
+                Get Support
               </Link>
-            </div>
+            </Button>
 
-            {/* I'm a Counselor */}
-            <div className="space-y-2">
-              <Button
-                asChild
-                size="lg"
-                variant="secondary"
-                className="w-full h-14 text-base font-semibold rounded-xl bg-secondary hover:bg-secondary/80 transition-all"
-              >
-                <Link href="/counselor/login">
-                  I&apos;m a Counselor
-                </Link>
-              </Button>
-              <Link
-                href="/counselor/signup"
-                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Register as a Counselor
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="w-full h-14 text-base font-semibold rounded-xl bg-secondary hover:bg-secondary/80 transition-all"
+            >
+              <Link href="/counselor/login">
+                I&apos;m a Counselor
               </Link>
-            </div>
+            </Button>
           </div>
 
           {/* Features */}
