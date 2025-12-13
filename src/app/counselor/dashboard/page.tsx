@@ -9,7 +9,8 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
-  LogOut
+  LogOut,
+  Home
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
@@ -311,11 +312,19 @@ export default function CounselorDashboard() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => router.push("/")}
+          >
+            <Home className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1">Home</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => fetchConversations(true)}
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
-            Refresh
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+            <span className="hidden sm:inline ml-1">Refresh</span>
           </Button>
           <Button
             variant="ghost"
