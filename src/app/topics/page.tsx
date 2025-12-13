@@ -9,6 +9,11 @@ import {
   Cloud,
   Users,
   MessageCircle,
+  Brain,
+  Sparkles,
+  Flame,
+  Briefcase,
+  Moon,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,11 +36,16 @@ interface UrgencyOption {
 }
 
 const topics: Topic[] = [
+  { id: "depression", name: "Depression & Sadness", icon: CloudRain },
+  { id: "anxiety", name: "Anxiety & Stress", icon: Brain },
   { id: "trauma", name: "Trauma & Past Pain", icon: Heart },
-  { id: "addiction", name: "Addiction & Recovery", icon: CircleOff },
-  { id: "anxiety", name: "Anxiety & Worry", icon: CloudRain },
   { id: "grief", name: "Grief & Loss", icon: Cloud },
   { id: "relationships", name: "Relationships", icon: Users },
+  { id: "addiction", name: "Addiction", icon: CircleOff },
+  { id: "self-esteem", name: "Self-Esteem", icon: Sparkles },
+  { id: "anger", name: "Anger & Frustration", icon: Flame },
+  { id: "sleep", name: "Sleep Problems", icon: Moon },
+  { id: "work", name: "Work & Career", icon: Briefcase },
   { id: "other", name: "Something Else", icon: MessageCircle },
 ]
 
