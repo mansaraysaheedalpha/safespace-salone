@@ -62,28 +62,43 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
+  // Check if microphone is supported
+  const isMicrophoneSupported = () => {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+  }
+
   const startRecording = async () => {
+    // Check if getUserMedia is supported
+    if (!isMicrophoneSupported()) {
+      setError("Voice recording is not supported on this device/browser.")
+      return
+    }
+
     setState("requesting-permission")
     setError(null)
 
     try {
+      // Request microphone access with simpler constraints for better mobile compatibility
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: true,
       })
 
       streamRef.current = stream
       chunksRef.current = []
 
-      // Try webm first, fall back to other formats
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "audio/mp4"
+      // Determine best supported audio format
+      let mimeType = "audio/webm"
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus"
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm"
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4"
+      } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+        mimeType = "audio/ogg"
+      } else if (MediaRecorder.isTypeSupported("audio/wav")) {
+        mimeType = "audio/wav"
+      }
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType })
       mediaRecorderRef.current = mediaRecorder
@@ -105,6 +120,13 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
         setState("recorded")
       }
 
+      mediaRecorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event)
+        setError("Recording failed. Please try again.")
+        setState("idle")
+        cleanup()
+      }
+
       mediaRecorder.start(100) // Collect data every 100ms
       setState("recording")
       setDuration(0)
@@ -122,7 +144,26 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       }, 1000)
     } catch (err) {
       console.error("Microphone access error:", err)
-      setError("Could not access microphone. Please check permissions.")
+
+      // Provide more specific error messages
+      if (err instanceof Error) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setError("Microphone access denied. Please allow microphone in your browser settings.")
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          setError("No microphone found. Please connect a microphone.")
+        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          setError("Microphone is in use by another app. Please close other apps and try again.")
+        } else if (err.name === "OverconstrainedError") {
+          setError("Microphone settings not supported. Please try again.")
+        } else if (err.name === "SecurityError") {
+          setError("Microphone access blocked. Please use HTTPS.")
+        } else {
+          setError("Could not access microphone. Please check permissions and try again.")
+        }
+      } else {
+        setError("Could not access microphone. Please check permissions.")
+      }
+
       setState("idle")
       cleanup()
     }
@@ -174,24 +215,37 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
     }
   }
 
-  // Auto-start recording when component mounts
-  useEffect(() => {
-    // Use requestAnimationFrame to defer the state change
-    const frameId = requestAnimationFrame(() => {
-      startRecording()
-    })
-    return () => cancelAnimationFrame(frameId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   return (
     <div className="flex items-center gap-3 w-full animate-in fade-in duration-200">
+      {/* Idle state - tap to start */}
+      {state === "idle" && !error && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cancelRecording}
+            className="h-10 w-10 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+          <button
+            onClick={startRecording}
+            className="flex-1 flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 rounded-full px-4 py-3 transition-colors"
+          >
+            <Mic className="w-5 h-5 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              Tap to start recording
+            </span>
+          </button>
+        </>
+      )}
+
       {/* Requesting permission state */}
       {state === "requesting-permission" && (
         <div className="flex-1 flex items-center justify-center gap-2 py-2">
           <Mic className="w-5 h-5 text-primary animate-pulse" />
           <span className="text-sm text-muted-foreground">
-            Tap to allow microphone...
+            Requesting microphone access...
           </span>
         </div>
       )}
@@ -325,7 +379,10 @@ export function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderPr
       {/* Error state */}
       {error && (
         <div className="flex-1 flex items-center justify-between gap-2 py-2">
-          <span className="text-sm text-destructive">{error}</span>
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="text-sm">{error}</span>
+          </div>
           <Button variant="ghost" size="sm" onClick={cancelRecording}>
             Close
           </Button>
