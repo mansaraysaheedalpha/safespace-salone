@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { MessageSquarePlus } from "lucide-react"
 import { ChatHeader } from "@/components/chat/chat-header"
 import { MessageList } from "@/components/chat/message-list"
 import { ChatInput } from "@/components/chat/chat-input"
 import { MessageListSkeleton } from "@/components/ui/skeleton"
 import { ErrorFallback } from "@/components/error-boundary"
+import { Button } from "@/components/ui/button"
 import { getUserSession } from "@/lib/auth"
 import { useMessages } from "@/hooks/useMessages"
 import { usePresence } from "@/hooks/usePresence"
@@ -25,7 +27,7 @@ export default function ChatPage() {
   const conversationId = params.id as string
 
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [_conversation, setConversation] = useState<Conversation | null>(null)
+  const [conversation, setConversation] = useState<Conversation | null>(null)
   const [counselorInfo, setCounselorInfo] = useState<{ id: string; name: string; avatarId: string } | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState("")
@@ -248,6 +250,8 @@ export default function ChatPage() {
     )
   }
 
+  const isConversationClosed = conversation?.status === "closed"
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -273,14 +277,31 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
-      <ChatInput
-        onSendText={handleSendText}
-        onSendVoice={handleSendVoice}
-        disabled={!userInfo || isSendingVoice}
-        replyingTo={replyingTo}
-        onCancelReply={handleCancelReply}
-      />
+      {/* Closed conversation banner or Input area */}
+      {isConversationClosed ? (
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
+          <div className="max-w-md mx-auto text-center">
+            <p className="text-muted-foreground text-sm mb-3">
+              This conversation has been closed by the counselor.
+            </p>
+            <Button
+              onClick={() => router.push("/topics")}
+              className="w-full"
+            >
+              <MessageSquarePlus className="w-4 h-4 mr-2" />
+              Start New Conversation
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <ChatInput
+          onSendText={handleSendText}
+          onSendVoice={handleSendVoice}
+          disabled={!userInfo || isSendingVoice}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
+        />
+      )}
     </div>
   )
 }
