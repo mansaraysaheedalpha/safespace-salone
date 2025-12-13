@@ -177,7 +177,7 @@ export const MessageBubble = memo(function MessageBubble({
           {onReply && !message.id.startsWith("temp-") && !isOwn && (
             <button
               onClick={handleReply}
-              className="p-1.5 rounded-full text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded-full text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
               aria-label="Reply to message"
             >
               <Reply className="w-4 h-4" />
@@ -344,7 +344,7 @@ export const MessageBubble = memo(function MessageBubble({
 
           {/* Action buttons for own messages */}
           {isOwn && !message.id.startsWith("temp-") && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               {/* Reply button */}
               {onReply && (
                 <button
