@@ -78,6 +78,12 @@ export default function CounselorLayout({
     return <>{children}</>
   }
 
+  // Chat pages have their own header, so don't show layout header
+  const isChatPage = pathname?.startsWith("/counselor/chat")
+  if (isChatPage) {
+    return <>{children}</>
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
