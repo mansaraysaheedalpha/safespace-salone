@@ -149,20 +149,25 @@ const TOPIC_TO_EXPERTISE: Record<string, string> = {
 
 ## Implementation Progress
 
-### Current Status: All Phases Complete
+### Current Status: Code Complete - Awaiting Migration
 
 ### Completed:
 - [x] Planning document created
 - [x] Create expertise constants file (`src/lib/constants/expertise.ts`)
-- [x] Database migration (`supabase/migrations/20241215_counselor_expertise.sql`)
+- [x] Database migration file (`supabase/migrations/20241215_counselor_expertise.sql`)
 - [x] Expertise selector component (`src/components/expertise-selector.tsx`)
 - [x] Update counselor signup page with expertise selection
 - [x] Update counselor signup API to save expertise
-- [x] Update conversations API to filter by expertise
+- [x] Update conversations API to filter by expertise (backwards-compatible)
 - [x] Update counselor dashboard to show expertise info
-- [x] Add "Request New Counselor" feature for patients
+- [x] Add "Request New Counselor" feature for patients (chat header menu)
 - [x] Reset conversation API (`src/app/api/conversations/[id]/reset/route.ts`)
+- [x] Deploy to production (Vercel)
 
 ### Pending:
-- [ ] Run database migration in Supabase
-- [ ] Deploy to production
+- [ ] **Run database migration in Supabase** - Required to enable full expertise features
+
+### Notes:
+- The API is backwards-compatible: existing counselors without expertise will see all conversations
+- New counselors must select at least one expertise area during signup
+- Once the migration is run, the full expertise routing will be active
